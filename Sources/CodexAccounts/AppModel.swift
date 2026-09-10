@@ -4,6 +4,12 @@ import UniformTypeIdentifiers
 import AccountsCore
 
 @MainActor final class AppModel: ObservableObject {
+    @Published var hideEmails = true {
+        didSet { if !demo { UserDefaults.standard.set(hideEmails, forKey: "hideEmails") } }
+    }
+    @Published var appearance = "system" {
+        didSet { if !demo { UserDefaults.standard.set(appearance, forKey: "appearance") } }
+    }
     @Published var accounts: [Account] = []
     @Published var selection: String?
     @Published var currentIdentity: String?
@@ -25,7 +31,15 @@ import AccountsCore
         let defaultHome = FileManager.default.homeDirectoryForCurrentUser.resolvingSymlinksInPath().appendingPathComponent(".codex")
         home = demo ? URL(fileURLWithPath: "/demo/.codex") : UserDefaults.standard.string(forKey: "codexHome").map { URL(fileURLWithPath: $0) } ?? defaultHome
         application = demo ? nil : UserDefaults.standard.string(forKey: "desktopApplication").map { URL(fileURLWithPath: $0) } ?? Desktop.discover()
-        if demo { loadDemo(); return }
+        if demo {
+            loadDemo()
+            if (CommandLine.arguments.contains("--demo-empty") || PreviewConfiguration.variant == "empty") { accounts = []; selection = nil; currentIdentity = nil }
+            if (CommandLine.arguments.contains("--demo-pending") || PreviewConfiguration.variant == "pending") { awaitingConfirmation = true; hasBackup = true; currentIdentity = selection; status = "演示：桌面 App 已重开，请核对账号。" }
+            if (CommandLine.arguments.contains("--demo-dark") || PreviewConfiguration.variant == "dark") { appearance = "dark" }
+            return
+        }
+        hideEmails = UserDefaults.standard.object(forKey: "hideEmails") as? Bool ?? true
+        appearance = UserDefaults.standard.string(forKey: "appearance") ?? "system"
         do {
             let root = try FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
                 .resolvingSymlinksInPath().appendingPathComponent("CodexAccounts", isDirectory: true)
@@ -44,6 +58,24 @@ import AccountsCore
     var selected: Account? { accounts.first { $0.id == selection } }
     var configured: Bool { application != nil && store != nil }
     var canCancel: Bool { session != nil }
+    var currentAccount: Account? { accounts.first { $0.id == currentIdentity } }
+    var preferredColorScheme: ColorScheme? { appearance == "dark" ? .dark : appearance == "light" ? .light : nil }
+    func title(_ account: Account) -> String { AccountPresentation.title(account, hideEmails: hideEmails) }
+    func switchBlockReason(_ id: String) -> String? {
+        if busy { return "请等待当前操作完成" }
+        if awaitingConfirmation { return "请先核对或恢复上次切换" }
+        if id == currentIdentity { return "已是当前认证，无需再次切换" }
+        if !demo && !configured { return "请先在设置中选择桌面 App" }
+        if !accounts.contains(where: { $0.id == id }) { return "账号已不存在" }
+        return nil
+    }
+    func checkCurrentIdentity() { if !demo { refreshFileIdentity() } }
+    func openDesktop() {
+        run("正在打开桌面 App…") {
+            try await self.desktop().startDesktop()
+            self.status = "桌面 App 已打开。"
+        }
+    }
 
     func chooseApplication() {
         let panel = NSOpenPanel(); panel.allowedContentTypes = [.applicationBundle]; panel.canChooseDirectories = false
@@ -137,6 +169,8 @@ import AccountsCore
         }
     }
     func switchTo(_ id: String) {
+        guard !demo else { return }
+        if let reason = switchBlockReason(id) { error = reason; return }
         run("正在检查切换条件…") {
             guard let store = self.store else { return }
             if self.awaitingConfirmation { throw AccountsError.message("请先核对或恢复上次切换，再进行下一次切换。") }
@@ -216,11 +250,13 @@ import AccountsCore
             let payload = try! JSONSerialization.data(withJSONObject: object).base64EncodedString()
             let data = try! JSONSerialization.data(withJSONObject: ["tokens": ["account_id": id, "id_token": "demo.\(payload).demo", "access_token": "demo", "refresh_token": "demo"]])
             var account = try! Account(snapshot: AuthSnapshot(data)); account.nickname = title; account.plan = plan
-            account.quotas = [.init(id: "short", label: "5 小时", remaining: short), .init(id: "long", label: "7 天", remaining: long)]
+            account.quotas = [.init(id: "short", label: "5 小时", remaining: short, resetsAt: Date().addingTimeInterval(7200)), .init(id: "long", label: "7 天", remaining: long, resetsAt: Date().addingTimeInterval(172800))]
             account.updatedAt = Date(); return account
         }
         accounts = [account("demo-one", "日常工作", "work@example.com", "pro", 84, 62), account("demo-two", "个人探索", "personal@example.com", "plus", 96, 89), account("demo-three", "备用账号", "backup@example.com", "plus", 18, 43)]
-        selection = accounts[0].id; currentIdentity = accounts[0].id
+        accounts[2].issue = "上次刷新未完成，显示的是缓存额度。"
+        accounts[2].updatedAt = Date().addingTimeInterval(-3600)
+        selection = accounts[1].id; currentIdentity = accounts[0].id
         status = "演示模式 · 所有账号与额度均为虚构，操作已禁用。"
     }
 }

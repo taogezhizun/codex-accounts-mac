@@ -61,3 +61,60 @@ final class LocalStoreTests: XCTestCase {
         XCTAssertFalse(model.busy); XCTAssertEqual(model.accounts, original)
     }
 }
+
+final class PresentationTests: XCTestCase {
+    @MainActor func testPrivacyProjectionDoesNotChangeAccountData() {
+        let model = AppModel(demo: true)
+        var account = model.accounts[0]; account.nickname = ""
+        let original = account
+        XCTAssertFalse(AccountPresentation.title(account, hideEmails: true).contains("@"))
+        XCTAssertEqual(AccountPresentation.email(account, hideEmails: true), "邮箱已隐藏")
+        XCTAssertEqual(AccountPresentation.title(account, hideEmails: false), account.email)
+        XCTAssertEqual(account, original)
+        model.hideEmails = false
+        XCTAssertEqual(model.accounts.count, 3)
+    }
+    @MainActor func testSearchTrimsWhitespaceAndKeepsCurrentFirstWithoutDroppingAccounts() {
+        let model = AppModel(demo: true)
+        var accounts = model.accounts
+        accounts.append(contentsOf: model.accounts.map { row in var row = row; row.id += "-more"; return row })
+        let sorted = AccountPresentation.ordered(accounts, current: accounts[2].id, query: "  ")
+        XCTAssertEqual(sorted.count, 6)
+        XCTAssertEqual(sorted.first?.id, accounts[2].id)
+        XCTAssertEqual(Array(sorted.dropFirst()).map(\.id), accounts.filter { $0.id != accounts[2].id }.map(\.id))
+        XCTAssertEqual(AccountPresentation.ordered(accounts, current: nil, query: " WORK@EXAMPLE.COM ").count, 2)
+        XCTAssertTrue(AccountPresentation.ordered(accounts, current: nil, query: "no-match").isEmpty)
+    }
+    @MainActor func testUnknownFailedOldAndResetQuotaNeedRefresh() {
+        let model = AppModel(demo: true)
+        let now = Date(); var account = model.accounts[0]; account.updatedAt = now
+        XCTAssertFalse(AccountPresentation.needsRefresh(account, now: now))
+        account.updatedAt = now.addingTimeInterval(-901)
+        XCTAssertTrue(AccountPresentation.needsRefresh(account, now: now))
+        account.updatedAt = now; account.issue = "synthetic failure"
+        XCTAssertTrue(AccountPresentation.needsRefresh(account, now: now))
+        account.issue = nil; account.quotas = []
+        XCTAssertTrue(AccountPresentation.needsRefresh(account, now: now))
+        account.updatedAt = now.addingTimeInterval(-120)
+        account.quotas = [.init(id: "test", label: "test", remaining: 50, resetsAt: now.addingTimeInterval(-60))]
+        XCTAssertTrue(AccountPresentation.needsRefresh(account, now: now))
+    }
+    @MainActor func testSwitchEligibilityPreventsRedundantOrPendingRestarts() {
+        let model = AppModel(demo: true)
+        XCTAssertNotNil(model.switchBlockReason(model.currentIdentity!))
+        let other = model.accounts.first { $0.id != model.currentIdentity }!
+        XCTAssertNil(model.switchBlockReason(other.id))
+        model.awaitingConfirmation = true
+        XCTAssertNotNil(model.switchBlockReason(other.id))
+        model.awaitingConfirmation = false; model.busy = true
+        XCTAssertNotNil(model.switchBlockReason(other.id))
+    }
+    @MainActor func testUpdatedTextNeverSaysNegativeTime() {
+        let model = AppModel(demo: true)
+        var account = model.accounts[0]; let now = Date()
+        account.updatedAt = now.addingTimeInterval(120)
+        XCTAssertEqual(AccountPresentation.updatedLabel(account, now: now), "刚刚更新")
+        account.updatedAt = nil
+        XCTAssertEqual(AccountPresentation.updatedLabel(account, now: now), "尚未刷新")
+    }
+}

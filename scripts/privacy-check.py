@@ -35,7 +35,7 @@ for name in sorted(set(filter(None, paths))):
     for label, pattern in patterns.items():
         if pattern.search(text):
             failures.append((name, label))
-    if any(m.group(1) not in {"example.com", "example.org", "users.noreply.github.com"} for m in email.finditer(text)):
+    if any(m.group(1).lower() not in {"example.com", "example.org", "users.noreply.github.com"} for m in email.finditer(text)):
         failures.append((name, "non-example email"))
 for name, label in failures:
     print(f"FAIL {name}: {label}", file=sys.stderr)
