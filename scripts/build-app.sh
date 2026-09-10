@@ -21,5 +21,5 @@ if /usr/bin/strings "$APP/Contents/MacOS/CodexAccounts" | /usr/bin/grep -Eq '/Us
   echo 'Privacy check failed: a user-home path is embedded in the binary.' >&2
   exit 1
 fi
-/usr/bin/ditto -c -k --sequesterRsrc --keepParent "$APP" "$ROOT/dist/Codex-Accounts-macOS-$ARCH.zip"
+/usr/bin/ditto --norsrc --noextattr -c -k --keepParent "$APP" "$ROOT/dist/Codex-Accounts-macOS-$ARCH.zip"
 printf 'Built: %s\n' "$APP"
