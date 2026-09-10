@@ -102,12 +102,13 @@ struct AccountAvatar: View {
     let account: Account
     let hideEmails: Bool
     var size: CGFloat = 38
+    var highlighted = false
     var body: some View {
         Text(AccountPresentation.initials(account, hideEmails: hideEmails))
             .font(.system(size: size * 0.30, weight: .semibold, design: .rounded))
-            .foregroundStyle(Palette.account(account.id))
+            .foregroundStyle(highlighted ? .white : Palette.account(account.id))
             .frame(width: size, height: size)
-            .background(Palette.account(account.id).opacity(0.12), in: RoundedRectangle(cornerRadius: size*0.29))
+            .background(highlighted ? Color.white.opacity(0.16) : Palette.account(account.id).opacity(0.12), in: RoundedRectangle(cornerRadius: size*0.29))
             .accessibilityHidden(true)
     }
 }
@@ -124,11 +125,12 @@ struct PlanBadge: View {
 struct QuotaMeter: View {
     let window: QuotaWindow
     var height: CGFloat = 5
+    var highlighted = false
     var body: some View {
         GeometryReader { geometry in
-            Capsule().fill(.quaternary)
+            Capsule().fill(highlighted ? Color.white.opacity(0.25) : Color.primary.opacity(0.12))
                 .overlay(alignment: .leading) {
-                    Capsule().fill(window.remaining < 20 ? Color.orange : Color.accentColor)
+                    Capsule().fill(highlighted ? Color.white : window.remaining < 20 ? Color.orange : Color.accentColor)
                         .frame(width: geometry.size.width * min(1, max(0, window.remaining / 100)))
                 }
         }.frame(height: height).accessibilityHidden(true)

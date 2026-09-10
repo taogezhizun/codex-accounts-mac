@@ -101,27 +101,30 @@ struct AccountsView: View {
 
 struct AccountSidebarRow: View {
     @EnvironmentObject var model: AppModel
+    @Environment(\.controlActiveState) private var activeState
     let account: Account
+    private var highlighted: Bool { model.selection == account.id && activeState != .inactive }
+    private var secondaryColor: Color { highlighted ? .white.opacity(0.85) : .secondary }
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
-            AccountAvatar(account: account, hideEmails: model.hideEmails)
+            AccountAvatar(account: account, hideEmails: model.hideEmails, highlighted: highlighted)
             VStack(alignment: .leading, spacing: 5) {
                 HStack(spacing: 6) {
                     Text(model.title(account)).font(.system(size: 13, weight: .medium)).lineLimit(1)
                     Spacer(minLength: 0)
-                    if account.id == model.currentIdentity { Image(systemName: "checkmark.circle.fill").font(.caption).foregroundStyle(.tint).accessibilityLabel("当前认证") }
+                    if account.id == model.currentIdentity { Image(systemName: "checkmark.circle.fill").font(.caption).foregroundStyle(highlighted ? .white : Color.accentColor).accessibilityLabel("当前认证") }
                 }
                 HStack(spacing: 5) {
                     Text(account.plan.uppercased()).font(.system(size: 10, weight: .medium))
                     if account.id == model.currentIdentity { Text("· 当前认证").font(.system(size: 10)) }
-                }.foregroundStyle(.secondary)
+                }.foregroundStyle(secondaryColor)
                 if let first = account.quotas.first {
                     HStack(spacing: 7) {
-                        QuotaMeter(window: first, height: 3).frame(maxWidth: 74)
-                        Text("\(Int(first.remaining))% 剩余").font(.system(size: 10)).monospacedDigit().foregroundStyle(.secondary)
-                        if AccountPresentation.needsRefresh(account) { Image(systemName: "clock").font(.system(size: 10)).foregroundStyle(.secondary).help("缓存可能已过期，请刷新额度") }
+                        QuotaMeter(window: first, height: 3, highlighted: highlighted).frame(maxWidth: 74)
+                        Text("\(Int(first.remaining))% 剩余").font(.system(size: 10)).monospacedDigit().foregroundStyle(secondaryColor)
+                        if AccountPresentation.needsRefresh(account) { Image(systemName: "clock").font(.system(size: 10)).foregroundStyle(secondaryColor).help("缓存可能已过期，请刷新额度") }
                     }.padding(.top, 2)
-                } else { Text("额度未读取").font(.system(size: 10)).foregroundStyle(.tertiary) }
+                } else { Text("额度未读取").font(.system(size: 10)).foregroundStyle(secondaryColor) }
             }
         }.padding(.vertical, 9)
     }
