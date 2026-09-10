@@ -250,12 +250,20 @@ import AccountsCore
             let payload = try! JSONSerialization.data(withJSONObject: object).base64EncodedString()
             let data = try! JSONSerialization.data(withJSONObject: ["tokens": ["account_id": id, "id_token": "demo.\(payload).demo", "access_token": "demo", "refresh_token": "demo"]])
             var account = try! Account(snapshot: AuthSnapshot(data)); account.nickname = title; account.plan = plan
-            account.quotas = [.init(id: "short", label: "5 小时", remaining: short, resetsAt: Date().addingTimeInterval(7200)), .init(id: "long", label: "7 天", remaining: long, resetsAt: Date().addingTimeInterval(172800))]
+            account.quotas = [.init(id: "short", label: "5 小时", remaining: short, resetsAt: Date().addingTimeInterval(7200), bucketID: "codex"), .init(id: "long", label: "7 天", remaining: long, resetsAt: Date().addingTimeInterval(172800), bucketID: "codex")]
             account.updatedAt = Date(); return account
         }
         accounts = [account("demo-one", "日常工作", "work@example.com", "pro", 84, 62), account("demo-two", "个人探索", "personal@example.com", "plus", 96, 89), account("demo-three", "备用账号", "backup@example.com", "plus", 18, 43)]
         accounts[2].issue = "上次刷新未完成，显示的是缓存额度。"
         accounts[2].updatedAt = Date().addingTimeInterval(-3600)
+        if CommandLine.arguments.contains("--demo-quotas") || PreviewConfiguration.variant == "quotas" {
+            accounts[1].quotas = QuotaWindow.parse(["rateLimitsByLimitId": [
+                "codex": ["limitName": "Codex", "secondary": ["usedPercent": 72.0, "windowDurationMins": 10080]],
+                "demo_unknown_a": ["primary": ["usedPercent": 15.0, "windowDurationMins": 300]],
+                "demo_unknown_b": ["limitName": "demo_unknown_b", "secondary": ["usedPercent": 25.0, "windowDurationMins": 10080]],
+                "demo_named": ["limitName": "示例模型额度", "primary": ["usedPercent": 30.0, "windowDurationMins": 300]]
+            ]])
+        }
         selection = accounts[1].id; currentIdentity = accounts[0].id
         status = "演示模式 · 所有账号与额度均为虚构，操作已禁用。"
     }

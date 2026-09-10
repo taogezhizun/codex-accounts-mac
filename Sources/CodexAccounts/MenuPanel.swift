@@ -95,13 +95,13 @@ private struct QuickAccountRow: View {
                     HStack(spacing: 7) { Text(model.title(account)).font(.system(size: 13, weight: .medium)).lineLimit(1); if current { Text("当前认证").font(.system(size: 9, weight: .medium)).foregroundStyle(.tint) }; Spacer(minLength: 0) }
                     HStack(spacing: 7) {
                         Text(account.plan.uppercased()).font(.system(size: 10)).foregroundStyle(.secondary)
-                        if let quota = account.quotas.first {
+                        if let quota = QuotaPresentation.summary(account.quotas) {
                             Text("·").foregroundStyle(.tertiary)
-                            Text("\(quota.label)剩余 \(Int(quota.remaining))%").font(.system(size: 10)).foregroundStyle(.secondary).monospacedDigit()
+                            Text("Codex \(QuotaPresentation.duration(quota))剩余 \(Int(quota.remaining))%").font(.system(size: 10)).foregroundStyle(.secondary).monospacedDigit()
                             if AccountPresentation.needsRefresh(account) {
                                 Image(systemName: "clock").font(.system(size: 10)).foregroundStyle(.secondary).help("缓存可能已过期，请在管理窗口刷新")
                             }
-                        } else { Text("· 额度未读取").font(.system(size: 10)).foregroundStyle(.secondary) }
+                        } else { Text("· Codex 额度未读取").font(.system(size: 10)).foregroundStyle(.secondary) }
                     }
                 }
                 Image(systemName: current ? "arrow.up.forward" : "arrow.right").font(.caption.weight(.medium)).foregroundStyle(hovered ? .primary : .tertiary)

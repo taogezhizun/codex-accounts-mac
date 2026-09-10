@@ -106,7 +106,7 @@ struct SettingsView: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section("关于") {
-                HStack(spacing: 12) { BrandMark(size: 38); VStack(alignment: .leading, spacing: 4) { Text("Codex Accounts").font(.headline); Text("0.2.0 · macOS 原生 · MIT License").font(.caption).foregroundStyle(.secondary) } }
+                HStack(spacing: 12) { BrandMark(size: 38); VStack(alignment: .leading, spacing: 4) { Text("Codex Accounts").font(.headline); Text("0.2.1 · macOS 原生 · MIT License").font(.caption).foregroundStyle(.secondary) } }
                 Link("灵感来源：codex-account-switcher", destination: URL(string: "https://github.com/cjg1995/codex-account-switcher")!)
                 Text("独立开发，与 OpenAI 及原项目作者无隶属或背书关系。凭据保存在本机钥匙串，登录和额度查询连接 OpenAI。")
                     .font(.caption).foregroundStyle(.secondary)

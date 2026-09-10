@@ -118,3 +118,53 @@ final class PresentationTests: XCTestCase {
         XCTAssertEqual(AccountPresentation.updatedLabel(account, now: now), "尚未刷新")
     }
 }
+
+final class QuotaPresentationTests: XCTestCase {
+    func testOfficialDisplayNameWinsAndPeriodIsSeparate() throws {
+        let windows = QuotaWindow.parse(["rateLimitsByLimitId": [
+            "codex": ["limitName": " Codex 标准额度 ", "primary": ["usedPercent": 35.0, "windowDurationMins": 300]]
+        ]])
+        XCTAssertEqual(windows.first?.bucketName, " Codex 标准额度 ")
+        XCTAssertEqual(windows.first?.label, "5 小时")
+        XCTAssertEqual(QuotaPresentation.groups(windows).first?.title, "Codex 标准额度")
+        XCTAssertEqual(try JSONDecoder().decode([QuotaWindow].self, from: JSONEncoder().encode(windows)), windows)
+    }
+    func testInternalOrBlankNamesRemainUnidentifiedWithoutLosingWindows() {
+        let windows = QuotaWindow.parse(["rateLimitsByLimitId": [
+            "pool_a": ["limitName": "pool_a", "primary": ["usedPercent": 20.0]],
+            "pool_b": ["limitName": "  ", "primary": ["usedPercent": 40.0]],
+            "pool_c": ["limitName": "another_internal_name", "primary": ["usedPercent": 55.0]],
+            "codex": ["limitName": NSNull(), "secondary": ["usedPercent": 70.0]]
+        ]])
+        let groups = QuotaPresentation.groups(windows)
+        XCTAssertEqual(groups.map(\.title), ["Codex", "其他额度 1", "其他额度 2", "其他额度 3"])
+        XCTAssertEqual(groups.flatMap(\.windows).count, 4)
+        XCTAssertEqual(groups.filter(\.unidentified).count, 3)
+        XCTAssertEqual(groups.flatMap(\.windows).map(\.remaining).sorted(), [30, 45, 60, 80])
+    }
+    func testOldCacheDecodesAndHidesRawNamesWithoutRefresh() throws {
+        let old = Data(#"[{"id":"pool_a.primary","label":"pool_a · 5 小时","remaining":82},{"id":"codex.secondary","label":"codex · 7 天","remaining":24}]"#.utf8)
+        let windows = try JSONDecoder().decode([QuotaWindow].self, from: old)
+        XCTAssertNil(windows[0].bucketID)
+        XCTAssertEqual(QuotaPresentation.duration(windows[0]), "5 小时")
+        XCTAssertEqual(QuotaPresentation.groups(windows).map(\.title), ["Codex", "其他额度 1"])
+        XCTAssertEqual(QuotaPresentation.summary(windows)?.remaining, 24)
+        XCTAssertEqual(try JSONDecoder().decode([QuotaWindow].self, from: JSONEncoder().encode(windows)), windows)
+    }
+    func testSummaryUsesTightestCodexWindowAndNeverAnotherPool() {
+        let windows = QuotaWindow.parse(["rateLimitsByLimitId": [
+            "aaa_other": ["primary": ["usedPercent": 0.0]],
+            "codex": ["primary": ["usedPercent": 20.0, "windowDurationMins": 300], "secondary": ["usedPercent": 75.0, "windowDurationMins": 10080]]
+        ]])
+        XCTAssertEqual(QuotaPresentation.summary(windows)?.remaining, 25)
+        XCTAssertEqual(QuotaPresentation.summary(windows).map(QuotaPresentation.duration), "7 天")
+        XCTAssertNil(QuotaPresentation.summary(windows.filter { QuotaPresentation.bucketID($0) != "codex" }))
+    }
+    func testDottedBucketIdentifierSurvivesOldCacheAndLegacyResponseWorks() {
+        let old = QuotaWindow(id: "pool.example.primary", label: "pool.example · 主要窗口", remaining: 66)
+        XCTAssertEqual(QuotaPresentation.bucketID(old), "pool.example")
+        let legacy = QuotaWindow.parse(["rateLimits": ["limitName": "Codex", "primary": ["usedPercent": 12.0]]])
+        XCTAssertEqual(QuotaPresentation.groups(legacy).first?.title, "Codex")
+        XCTAssertEqual(QuotaPresentation.summary(legacy)?.remaining, 88)
+    }
+}

@@ -29,3 +29,7 @@ The flattened `.icns` supports the existing macOS 14+ build path without requiri
 ## Review
 
 See [validation](VALIDATION.md) for checked states and the remaining real-account acceptance boundary. The icon review board is rendered entirely from original drawing code and contains no account, device or workspace information.
+
+## 0.2.1 quota naming
+
+Use the optional `limitName` from the [official rate-limit response](https://learn.chatgpt.com/docs/app-server#6-rate-limits-chatgpt). Empty names, names identical to the raw ID, and machine-style underscore labels fall back to an unidentified group; do not guess a model from its code name. Show recognized Codex first, keep unknown pools in a collapsed disclosure, and expose IDs only in the information popover. Summaries use the tightest Codex window, never an unrelated full pool. Old cache IDs and period labels are projected without a destructive migration.

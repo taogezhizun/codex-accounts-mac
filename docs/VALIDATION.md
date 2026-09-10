@@ -23,3 +23,9 @@ Do not claim real-account end-to-end validation based on unit tests or a demo sc
 ## 0.2 UI verification
 
 Checked synthetic light, dark, empty-account and pending-confirmation windows on Apple Silicon. Checked the menu panel target confirmation, pause-task checkbox and cancellation. The demo final action remains disabled even after confirmation. Presentation tests cover email masking without data mutation, case-insensitive trimmed search, current-account ordering with more than five accounts, quota freshness, switch eligibility and future timestamps. The 30-test local run included the actual CLI in an empty isolated home; all passed. This does not replace the real-account acceptance above.
+
+## 0.2.1 quota labels
+
+Regression coverage checks official display names, missing/opaque labels, all-window preservation, old cache decoding without refresh, dotted bucket IDs, the legacy response, and the minimum remaining Codex window used in summaries. Demo quota fixtures are synthetic and do not reproduce account usage screenshots. Real account login and switching acceptance remains unchanged.
+
+Verified the default collapsed state, recognized display names, unknown group expansion and raw-ID information popover using the isolated quota demo. All 35 local tests passed, including the opt-in signed-out CLI test. No live account was accessed for UI verification.

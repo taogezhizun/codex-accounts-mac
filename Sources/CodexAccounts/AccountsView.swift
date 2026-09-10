@@ -118,13 +118,13 @@ struct AccountSidebarRow: View {
                     Text(account.plan.uppercased()).font(.system(size: 10, weight: .medium))
                     if account.id == model.currentIdentity { Text("· 当前认证").font(.system(size: 10)) }
                 }.foregroundStyle(secondaryColor)
-                if let first = account.quotas.first {
+                if let first = QuotaPresentation.summary(account.quotas) {
                     HStack(spacing: 7) {
                         QuotaMeter(window: first, height: 3, highlighted: highlighted).frame(maxWidth: 74)
                         Text("\(Int(first.remaining))% 剩余").font(.system(size: 10)).monospacedDigit().foregroundStyle(secondaryColor)
                         if AccountPresentation.needsRefresh(account) { Image(systemName: "clock").font(.system(size: 10)).foregroundStyle(secondaryColor).help("缓存可能已过期，请刷新额度") }
-                    }.padding(.top, 2)
-                } else { Text("额度未读取").font(.system(size: 10)).foregroundStyle(secondaryColor) }
+                    }.padding(.top, 2).help("Codex \(QuotaPresentation.duration(first))：剩余 \(Int(first.remaining))%。摘要显示 Codex 各周期中的最低值。")
+                } else { Text("Codex 额度未读取").font(.system(size: 10)).foregroundStyle(secondaryColor) }
             }
         }.padding(.vertical, 9)
     }

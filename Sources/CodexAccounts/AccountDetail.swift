@@ -50,9 +50,7 @@ struct AccountDetail: View {
                             Button("读取额度") { model.refresh(account.id) }.disabled(model.busy || model.demo)
                         }.frame(maxWidth: .infinity).padding(28).background(.background, in: RoundedRectangle(cornerRadius: 14)).overlay(RoundedRectangle(cornerRadius: 14).stroke(.quaternary))
                     } else {
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 190), spacing: 14)], spacing: 14) {
-                            ForEach(account.quotas) { window in QuotaCard(window: window) }
-                        }
+                        QuotaGroupsView(windows: account.quotas)
                     }
                     if let issue = account.issue {
                         Label(issue, systemImage: "exclamationmark.arrow.triangle.2.circlepath").font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
@@ -94,7 +92,7 @@ struct QuotaCard: View {
     let window: QuotaWindow
     var body: some View {
         VStack(alignment: .leading, spacing: 17) {
-            HStack { Text(window.label).font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary); Spacer(); Image(systemName: window.label.contains("7 天") ? "calendar" : "clock").foregroundStyle(.tertiary) }
+            HStack { Text(QuotaPresentation.duration(window)).font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary); Spacer(); Image(systemName: QuotaPresentation.duration(window).contains("7 天") ? "calendar" : "clock").foregroundStyle(.tertiary) }
             HStack(alignment: .firstTextBaseline, spacing: 2) {
                 Text("\(Int(window.remaining))").font(.system(size: 39, weight: .semibold, design: .rounded)).monospacedDigit()
                 Text("%").font(.title3).foregroundStyle(.secondary)

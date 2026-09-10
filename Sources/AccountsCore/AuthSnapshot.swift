@@ -59,8 +59,11 @@ public struct QuotaWindow: Codable, Equatable, Identifiable {
     public let label: String
     public let remaining: Double
     public let resetsAt: Date?
-    public init(id: String, label: String, remaining: Double, resetsAt: Date? = nil) {
+    public let bucketID: String?
+    public let bucketName: String?
+    public init(id: String, label: String, remaining: Double, resetsAt: Date? = nil, bucketID: String? = nil, bucketName: String? = nil) {
         self.id = id; self.label = label; self.remaining = remaining; self.resetsAt = resetsAt
+        self.bucketID = bucketID; self.bucketName = bucketName
     }
     public static func parse(_ response: [String: Any]) -> [QuotaWindow] {
         var buckets: [(String, [String: Any])] = []
@@ -79,9 +82,8 @@ public struct QuotaWindow: Codable, Equatable, Identifiable {
                 case .some(let m) where m > 0: duration = m % 60 == 0 ? "\(m / 60) 小时" : "\(m) 分钟"
                 default: duration = slot == "primary" ? "主要窗口" : "次要窗口"
                 }
-                let label = buckets.count > 1 ? "\(name) · \(duration)" : duration
                 let reset = (row["resetsAt"] as? Double).map { Date(timeIntervalSince1970: $0) }
-                return QuotaWindow(id: "\(name).\(slot)", label: label, remaining: min(100, max(0, 100-used)), resetsAt: reset)
+                return QuotaWindow(id: "\(name).\(slot)", label: duration, remaining: min(100, max(0, 100-used)), resetsAt: reset, bucketID: name, bucketName: bucket["limitName"] as? String)
             }
         }
     }
