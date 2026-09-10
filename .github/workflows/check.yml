@@ -1,0 +1,15 @@
+name: Check
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Privacy scan
+        run: python3 scripts/privacy-check.py
+      - name: Unit tests
+        run: swift test
+      - name: Build native app
+        run: ./scripts/build-app.sh

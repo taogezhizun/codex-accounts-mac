@@ -1,0 +1,21 @@
+# Validation
+
+## Automated / isolated
+
+The test suite exercises stable identity across token rotation; separate users in one workspace; invalid and mixed API-key credentials; missing and multiple quota buckets; private permissions; symlink refusal; exclusive instance locks; backup ordering; shutdown-time token rotation; refused termination; failed backup; failed relaunch; concurrent credential changes; guarded restoration; wrong-directory refusal; and a previously absent credential file.
+
+The opt-in CLI smoke test starts the actual locally installed Codex binary with an empty private home, verifies initialization, signed-out account state and file-storage config, then shuts down and removes the isolated directory. It does not log in, switch the desktop or query a real account's quota.
+
+The release script verifies its ad-hoc signature and scans executable strings for builder home paths. UI checks use synthetic demo data only. Intel and older macOS versions still need real-device testing.
+
+## Manual acceptance before daily use
+
+Use two of your own accounts and pause work in every client sharing the credential directory.
+
+1. Save the currently logged-in account A; add B through the OpenAI browser flow. Confirm the desktop still shows A.
+2. Explicitly refresh B's quota. Confirm displayed values are plausible and stale/unknown states are labeled correctly.
+3. Switch A → B. Confirm the desktop closes normally, reopens, and its account screen shows B. Only then confirm success in the utility.
+4. Use recovery. Confirm the desktop returns to A. Then test a normal B → A switch.
+5. Verify preferences and existing local tasks remain usable; restart the utility during a pending confirmation and confirm recovery is still available.
+
+Do not claim real-account end-to-end validation based on unit tests or a demo screenshot. Record only client versions and anonymized outcomes; keep real email addresses, tokens, home paths and private workspace details out of this repository.
