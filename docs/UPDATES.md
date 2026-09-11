@@ -1,4 +1,4 @@
-# Updates and refresh — 0.3.1
+# Updates and refresh — 0.3.2
 
 ## User behavior
 
@@ -6,7 +6,9 @@ About credits the public maintainer account and links to the GitHub profile and 
 
 Quota refresh runs only for the saved account matching the current Codex file login. It runs on launch and at five-minute intervals; wakeups refresh only if due. Other accounts keep their last cached values and cannot be refreshed manually until switched to and confirmed. The live identity is re-read on each tick and at asynchronous refresh boundaries, preventing an external login change from applying results to another account. Signed-out and unsaved logins produce no background requests. Failures back off through 10, 20, 40 and 60 minutes. Refresh remains paused during login, switching, pending confirmation and Sparkle updates.
 
-Quota credentials come exclusively from the live auth file; there is no Keychain fallback or post-refresh backup read. Startup recovery inspection forbids authentication UI. If access is unavailable, the app shows an explicit check-recovery action and preserves the pending/unknown guard instead of treating the journal as absent. Only deliberate user actions may request Keychain authorization. Saved accounts and recovery backups remain in the local Keychain.
+Quota credentials come exclusively from the live auth file; there is no Keychain fallback or post-refresh backup read. Startup and ordinary operation completion do not read the Keychain at all. Recovery state starts unchecked without blocking current-file quota queries. A confirmed switch checks the durable journal before reading the target credentials or stopping the desktop; a pending, denied or malformed journal stops the switch. A failed transaction leaves recovery unchecked and blocks further switches until explicitly inspected. Restore stays available on demand after relaunch. Only deliberate credential operations may request Keychain authorization. Saved accounts and recovery backups remain in the local Keychain.
+
+The 0.3.1 attempt to suppress startup authorization with `kSecUseAuthenticationUIFail` was insufficient for the legacy file-based login Keychain. [Chromium documents the same backend limitation](https://chromium.googlesource.com/chromium/src/crypto/+/refs/heads/main/apple/scoped_keychain_user_interaction_allowed.cc). Version 0.3.2 removes the call instead of depending on a suppression flag. [OpenUsage also tries Codex login files before its Keychain fallback](https://github.com/robinebers/openusage/blob/main/Sources/OpenUsage/Providers/Codex/CodexProvider.swift); its fallback can still require authorization. No implementation code was copied.
 
 This cadence and cache feedback were inspired by [OpenUsage’s refreshing documentation](https://github.com/robinebers/openusage/blob/main/docs/refreshing.md); the implementation is independent.
 
@@ -42,8 +44,8 @@ dist/packaging-venv/bin/pip install -r scripts/dmg-requirements.txt
 After building a release, package and verify each architecture (replace the version when preparing a new release):
 
 ```sh
-ARCH=arm64 OUTPUT_DIR="$PWD/dist/v0.3.1/arm64" scripts/build-dmg.sh
-python3 scripts/verify-dmg.py dist/v0.3.1/arm64/Codex-Accounts-macOS-arm64.dmg dist/v0.3.1/arm64/Codex-Accounts-macOS-arm64.zip
+ARCH=arm64 OUTPUT_DIR="$PWD/dist/v0.3.2/arm64" scripts/build-dmg.sh
+python3 scripts/verify-dmg.py dist/v0.3.2/arm64/Codex-Accounts-macOS-arm64.dmg dist/v0.3.2/arm64/Codex-Accounts-macOS-arm64.zip
 ```
 
 Repeat with `x86_64`. Open the DMG normally in Finder to inspect the icon layout, arrow and installation text. The verifier mounts read-only, checks the app signature, compares every app file and symlink with the ZIP, and scans for private home paths. It never launches the packaged app.

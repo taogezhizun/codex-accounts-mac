@@ -51,19 +51,11 @@ final class CurrentQuotaTests: XCTestCase {
             XCTAssertEqual(schedule.next.count, current == "a" ? 1 : 0)
         }
     }
-    func testSilentRecoveryReadForbidsUIAndPreservesDeniedAsError() {
-        let vault = KeychainVault { query, _ in
-            let query = query as NSDictionary
-            XCTAssertEqual(query[kSecUseAuthenticationUI] as? String, kSecUseAuthenticationUIFail as String)
-            return errSecInteractionNotAllowed
-        }
-        XCTAssertThrowsError(try vault.read("example-recovery", allowInteraction: false))
-    }
     func testExplicitRecoveryReadCanAuthorizeAndMissingItemIsAbsent() throws {
         let vault = KeychainVault { query, _ in
             XCTAssertNil((query as NSDictionary)[kSecUseAuthenticationUI])
             return errSecItemNotFound
         }
-        XCTAssertNil(try vault.read("example-recovery", allowInteraction: true))
+        XCTAssertNil(try vault.read("example-recovery"))
     }
 }

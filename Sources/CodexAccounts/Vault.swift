@@ -8,11 +8,10 @@ final class KeychainVault {
     init(copyMatching: @escaping (CFDictionary, UnsafeMutablePointer<CFTypeRef?>) -> OSStatus = { SecItemCopyMatching($0, $1) }) {
         self.copyMatching = copyMatching
     }
-    func read(_ key: String, allowInteraction: Bool = true) throws -> Data? {
+    func read(_ key: String) throws -> Data? {
         var query = base(key)
         query[kSecReturnData as String] = true
         query[kSecMatchLimit as String] = kSecMatchLimitOne
-        if !allowInteraction { query[kSecUseAuthenticationUI as String] = kSecUseAuthenticationUIFail }
         var value: CFTypeRef?
         let status = copyMatching(query as CFDictionary, &value)
         if status == errSecItemNotFound { return nil }
@@ -44,10 +43,11 @@ final class KeychainVault {
 
 final class AccountStore {
     let directory: URL
-    private let vault = KeychainVault()
+    private let vault: KeychainVault
     private let lock: ExclusiveLock
     var accounts: [Account] = []
-    init(directory: URL) throws {
+    init(directory: URL, vault: KeychainVault = KeychainVault()) throws {
+        self.vault = vault
         self.directory = directory
         try PrivateFiles.makeDirectory(directory)
         lock = try ExclusiveLock(at: directory.appendingPathComponent("instance.lock"))
@@ -92,8 +92,8 @@ final class AccountStore {
         accounts.removeAll { $0.id == id }; try save(); try vault.remove(id)
     }
     func saveBackup(_ value: SwitchBackup) throws { try vault.write(JSONEncoder().encode(value), key: "switch-recovery") }
-    func backup(allowInteraction: Bool = true) throws -> SwitchBackup? {
-        guard let data = try vault.read("switch-recovery", allowInteraction: allowInteraction) else { return nil }
+    func backup() throws -> SwitchBackup? {
+        guard let data = try vault.read("switch-recovery") else { return nil }
         return try JSONDecoder().decode(SwitchBackup.self, from: data)
     }
     func confirmBackup() throws {

@@ -6,16 +6,16 @@ IMPORTANT: This file was signed by Sparkle. Any modifications to this file requi
     <link>https://github.com/taogezhizun/codex-accounts-mac</link>
     <description>Signed updates maintained by taogezhizun.</description>
     <item>
-      <title>Codex Accounts 0.3.1</title>
-      <pubDate>Fri, 11 Sep 2026 03:42:20 +0000</pubDate>
-      <sparkle:version>5</sparkle:version>
-      <sparkle:shortVersionString>0.3.1</sparkle:shortVersionString>
+      <title>Codex Accounts 0.3.2</title>
+      <pubDate>Fri, 11 Sep 2026 03:57:41 +0000</pubDate>
+      <sparkle:version>6</sparkle:version>
+      <sparkle:shortVersionString>0.3.2</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <link>https://github.com/taogezhizun/codex-accounts-mac/releases/tag/v0.3.1</link>
-      <enclosure url="https://github.com/taogezhizun/codex-accounts-mac/releases/download/v0.3.1/Codex-Accounts-macOS-x86_64.zip" sparkle:edSignature="geH2Gu4+nfuG/Jmvg1xI+15vAFHdCbxUee71AfsIv9ORFqlr6AAwj02rSk4O18PKfgUAi1CyxGMgXFKGZz41BA==" length="2622640" type="application/octet-stream"></enclosure>
+      <link>https://github.com/taogezhizun/codex-accounts-mac/releases/tag/v0.3.2</link>
+      <enclosure url="https://github.com/taogezhizun/codex-accounts-mac/releases/download/v0.3.2/Codex-Accounts-macOS-x86_64.zip" sparkle:edSignature="RGJtUwRtwwhIFpqrMMOhnecZdWkVbCw0aQAaMsV17B7XnG7cXi4e6Z6qKLFyZR/f3TE8/e0a9qI7yGiUlLCiBg==" length="2622029" type="application/octet-stream"></enclosure>
     </item>
   </channel>
 </rss><!-- sparkle-signatures:
-edSignature: o/CiDhzrT+Y1b9V+o3YiM1x4Aj15PRXNL8bwD7YHc5c0JsaUUr1T8UP5XIg5yOo0sxlYT7+PuR9Yh0k0S01sBg==
+edSignature: MzBzaFkAwHlLMDAeHrys+jz20jeZ9/PyFZmXyPiumjFMXJbYQO7ZGe6/FDSlXUGHYZBIew8fsX8Z8chxLbEKDg==
 length: 1292
 -->

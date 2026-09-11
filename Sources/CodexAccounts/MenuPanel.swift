@@ -76,7 +76,7 @@ struct MenuPanel: View {
                 HStack {
                     Button { openWindow(id: "accounts"); NSApp.activate(ignoringOtherApps: true) } label: { Label("管理账号", systemImage: "sidebar.left") }
                     Spacer()
-                    if model.hasBackup { Button { recovering = true } label: { Image(systemName: "clock.arrow.circlepath") }.help("恢复上次认证").disabled(model.busy || model.demo) }
+                    if model.hasBackup || model.recoveryNeedsUnlock { Button { recovering = true } label: { Image(systemName: "clock.arrow.circlepath") }.help("恢复上次认证").disabled(model.busy || model.demo) }
                     SettingsLink { Image(systemName: "gearshape") }.help("设置")
                     Button { NSApp.terminate(nil) } label: { Image(systemName: "power") }.help("退出 Codex Accounts").disabled(model.busy)
                 }.buttonStyle(.borderless).padding(15)

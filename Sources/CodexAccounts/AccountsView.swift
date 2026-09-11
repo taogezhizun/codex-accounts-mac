@@ -77,7 +77,7 @@ struct AccountsView: View {
                 AddAccountMenu().disabled(model.busy || model.demo)
                 Menu {
                     Button("打开桌面 App") { model.openDesktop() }.disabled(model.busy || model.demo)
-                    Button("恢复上次认证…") { showRestore = true }.disabled(!model.hasBackup || model.busy || model.demo)
+                    Button("恢复上次认证…") { showRestore = true }.disabled((!model.hasBackup && !model.recoveryNeedsUnlock) || model.busy || model.demo)
                     Divider()
                     SettingsLink { Text("设置…") }
                 } label: { Label("更多操作", systemImage: "ellipsis.circle") }.help("更多操作")

@@ -5,15 +5,15 @@ import AccountsCore
 
 @MainActor final class AppModel: ObservableObject {
     @Published var hideEmails = true {
-        didSet { if !demo { UserDefaults.standard.set(hideEmails, forKey: "hideEmails") } }
+        didSet { if !demo { defaults.set(hideEmails, forKey: "hideEmails") } }
     }
     @Published var appearance = "system" {
-        didSet { if !demo { UserDefaults.standard.set(appearance, forKey: "appearance") } }
+        didSet { if !demo { defaults.set(appearance, forKey: "appearance") } }
     }
     @Published var automaticRefresh = true {
         didSet {
             if !demo {
-                UserDefaults.standard.set(automaticRefresh, forKey: "automaticRefresh")
+                defaults.set(automaticRefresh, forKey: "automaticRefresh")
                 if !automaticRefresh && refreshingAutomatically { cancel() }
                 updateNextRefresh()
             }
@@ -38,16 +38,19 @@ import AccountsCore
     @Published var application: URL?
     @Published var home: URL
     let demo: Bool
+    private let defaults: UserDefaults
     private var store: AccountStore?
     private var operation: Task<Void, Never>?
     private var session: IsolatedSession?
 
-    init(demo: Bool = false) {
+    init(demo: Bool = false, directory: URL? = nil, defaults: UserDefaults = .standard,
+         startServices: Bool = true, vault: KeychainVault = KeychainVault()) {
         self.demo = demo
+        self.defaults = defaults
         updates = AppUpdates(enabled: !demo)
         let defaultHome = FileManager.default.homeDirectoryForCurrentUser.resolvingSymlinksInPath().appendingPathComponent(".codex")
-        home = demo ? URL(fileURLWithPath: "/demo/.codex") : UserDefaults.standard.string(forKey: "codexHome").map { URL(fileURLWithPath: $0) } ?? defaultHome
-        application = demo ? nil : UserDefaults.standard.string(forKey: "desktopApplication").map { URL(fileURLWithPath: $0) } ?? Desktop.discover()
+        home = demo ? URL(fileURLWithPath: "/demo/.codex") : defaults.string(forKey: "codexHome").map { URL(fileURLWithPath: $0) } ?? defaultHome
+        application = demo ? nil : defaults.string(forKey: "desktopApplication").map { URL(fileURLWithPath: $0) } ?? Desktop.discover()
         if demo {
             loadDemo()
             if (CommandLine.arguments.contains("--demo-empty") || PreviewConfiguration.variant == "empty") { accounts = []; selection = nil; currentIdentity = nil }
@@ -56,22 +59,24 @@ import AccountsCore
             if PreviewConfiguration.variant == "recovery-lock" { recoveryNeedsUnlock = true; awaitingConfirmation = true; hasBackup = false }
             return
         }
-        automaticRefresh = UserDefaults.standard.object(forKey: "automaticRefresh") as? Bool ?? true
-        hideEmails = UserDefaults.standard.object(forKey: "hideEmails") as? Bool ?? true
-        appearance = UserDefaults.standard.string(forKey: "appearance") ?? "system"
+        automaticRefresh = defaults.object(forKey: "automaticRefresh") as? Bool ?? true
+        hideEmails = defaults.object(forKey: "hideEmails") as? Bool ?? true
+        appearance = defaults.string(forKey: "appearance") ?? "system"
         do {
-            let root = try FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
+            let root = try directory ?? FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
                 .resolvingSymlinksInPath().appendingPathComponent("CodexAccounts", isDirectory: true)
-            store = try AccountStore(directory: root)
+            store = try AccountStore(directory: root, vault: vault)
             accounts = store!.accounts
             selection = accounts.first?.id
-            // On relaunch, the encrypted journal survives even if the last process crashed.
-            loadRecoveryState(allowInteraction: false)
+            // Do not probe the login Keychain here, even with a "no UI" query flag.
+            // The encrypted journal is checked before an explicit switch or restore.
+            recoveryNeedsUnlock = true
             refreshFileIdentity()
-            status = recoveryNeedsUnlock ? "请点击检查恢复记录，授权后继续使用。" : awaitingConfirmation ? "上次切换尚待核对。请检查桌面 App 的账号，或恢复上次认证。" : (accounts.isEmpty ? "从添加一个账号开始。" : "选择账号，随时切换。")
+            status = accounts.isEmpty ? "从添加一个账号开始。" : "选择账号，随时切换。"
         } catch { self.error = "本地账号库无法打开。\(safeMessage(error))" }
         updates.isOperationBusy = { [weak self] in self?.busy ?? false }
         updates.onSessionEnd = { [weak self] in self?.automaticRefreshTick() }
+        guard startServices else { return }
         // One timer per model, shared by all windows and the menu bar.
         refreshTimer = Timer.scheduledTimer(withTimeInterval: 15, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in self?.automaticRefreshTick() }
@@ -128,14 +133,14 @@ import AccountsCore
         panel.message = "选择 Codex 桌面 App（也可能显示为 ChatGPT）。"
         if panel.runModal() == .OK, let url = panel.url {
             guard Bundle(url: url)?.bundleIdentifier == Desktop.bundleID else { error = "所选应用不是 Codex 桌面 App。"; return }
-            application = url; UserDefaults.standard.set(url.path, forKey: "desktopApplication")
+            application = url; defaults.set(url.path, forKey: "desktopApplication")
         }
     }
     func chooseHome() {
         let panel = NSOpenPanel(); panel.canChooseFiles = false; panel.canChooseDirectories = true; panel.showsHiddenFiles = true
         panel.message = "选择桌面 App 使用的 Codex 目录。通常是用户目录下的 .codex。"
         if panel.runModal() == .OK, let url = panel.url {
-            home = url.resolvingSymlinksInPath(); UserDefaults.standard.set(home.path, forKey: "codexHome"); refreshFileIdentity()
+            home = url.resolvingSymlinksInPath(); defaults.set(home.path, forKey: "codexHome"); refreshFileIdentity()
         }
     }
     func importCurrent() {
@@ -193,7 +198,7 @@ import AccountsCore
             return
         }
         refreshingAutomatically = automatic
-        run(automatic ? "正在自动刷新额度…" : "正在读取额度…", quietly: automatic, recheckRecovery: false) {
+        run(automatic ? "正在自动刷新额度…" : "正在读取额度…", quietly: automatic) {
             var succeeded = false
             defer {
                 self.refreshSchedule.completed(id, succeeded: succeeded, now: Date())
@@ -238,20 +243,25 @@ import AccountsCore
         if let reason = switchBlockReason(id) { error = reason; return }
         run("正在检查切换条件…") {
             guard let store = self.store else { return }
+            // Read the durable journal before accessing a target or stopping the desktop.
+            // A crash/relaunch must never let a second switch overwrite a pending backup.
+            _ = try self.loadRecoveryState()
             if self.awaitingConfirmation { throw AccountsError.message("请先核对或恢复上次切换，再进行下一次切换。") }
             let target = try store.snapshot(id)
             let desktop = try self.desktop()
+            self.invalidateRecoveryState()
             _ = try await SwitchTransaction.run(target: target, environment: desktop)
-            self.awaitingConfirmation = true; self.hasBackup = true
+            self.awaitingConfirmation = true; self.hasBackup = true; self.recoveryNeedsUnlock = false
             self.refreshFileIdentity(); self.sync()
             self.status = "认证已更新，桌面 App 已重开。请在 App 中核对账号；当前还未确认桌面登录成功。"
         }
     }
     func restore() {
         run("正在准备恢复…") {
-            guard let backup = try self.store?.backup() else { throw AccountsError.message("没有可恢复的备份。") }
+            guard let backup = try self.loadRecoveryState() else { throw AccountsError.message("没有可恢复的备份。") }
+            self.invalidateRecoveryState()
             try await SwitchTransaction.restore(backup, environment: self.desktop())
-            self.awaitingConfirmation = true
+            self.awaitingConfirmation = true; self.hasBackup = true; self.recoveryNeedsUnlock = false
             self.refreshFileIdentity(); self.sync()
             self.status = "原认证已恢复，桌面 App 已重开。请核对账号。"
         }
@@ -295,7 +305,7 @@ import AccountsCore
         refreshSchedule.reconcileCurrent(currentIdentity, savedIDs: accounts.map(\.id), now: now)
         updateNextRefresh()
     }
-    private func run(_ message: String, quietly: Bool = false, recheckRecovery: Bool = true, body: @escaping () async throws -> Void) {
+    private func run(_ message: String, quietly: Bool = false, body: @escaping () async throws -> Void) {
         guard !busy, !demo, !updates.sessionInProgress else { return }
         busy = true
         if !quietly { error = nil }
@@ -308,33 +318,37 @@ import AccountsCore
                 status = quietly ? "自动刷新未完成，保留上次额度并稍后重试。" : "操作未完成。"
             }
             loginCode = nil; busy = false
-            if recheckRecovery { loadRecoveryState(allowInteraction: false) }
             // Re-evaluate the live account after the operation, avoiding overlapping helpers.
             Task { @MainActor [weak self] in self?.automaticRefreshTick() }
         }
     }
-    private func loadRecoveryState(allowInteraction: Bool) {
+    private func invalidateRecoveryState() {
+        // A failed transaction may already have persisted a pending journal.
+        recoveryNeedsUnlock = true
+        awaitingConfirmation = true
+        hasBackup = false
+    }
+    private func loadRecoveryState() throws -> SwitchBackup? {
         do {
-            let backup = try store?.backup(allowInteraction: allowInteraction)
+            guard let store else { throw AccountsError.message("本地账号库未就绪。") }
+            let backup = try store.backup()
             hasBackup = backup != nil
             awaitingConfirmation = backup?.isPending ?? false
             recoveryNeedsUnlock = false
+            return backup
         } catch {
-            // Unknown is not "no pending switch". Keep switching blocked without prompting in the background.
-            recoveryNeedsUnlock = true
-            awaitingConfirmation = true
-            hasBackup = false
-            if allowInteraction { self.error = safeMessage(error) }
+            invalidateRecoveryState()
+            throw error
         }
     }
     func unlockRecoveryRecord() {
         guard !demo, !busy, !updates.sessionInProgress else { return }
         error = nil
-        loadRecoveryState(allowInteraction: true)
-        if !recoveryNeedsUnlock {
+        do {
+            _ = try loadRecoveryState()
             status = awaitingConfirmation ? "恢复记录已读取，请核对上次切换。" : "恢复记录已检查，可以继续使用。"
             automaticRefreshTick()
-        }
+        } catch { self.error = safeMessage(error) }
     }
     private func safeMessage(_ error: Error) -> String {
         if let known = error as? AccountsError { return known.localizedDescription }

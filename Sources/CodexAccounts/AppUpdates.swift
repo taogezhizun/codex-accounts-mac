@@ -76,7 +76,6 @@ struct RefreshStatusView: View {
                 if model.demo { return "演示模式不连接账号" }
                 if !model.automaticRefresh { return "自动刷新已暂停" }
                 if model.refreshingAutomatically { return "正在刷新当前账号 · 可取消" }
-                if model.recoveryNeedsUnlock { return "检查恢复记录后继续自动刷新" }
                 if model.awaitingConfirmation { return "核对切换结果后继续自动刷新" }
                 guard let date = model.nextRefresh else { return "保存当前登录账号后自动刷新" }
                 let seconds = Int(date.timeIntervalSince(context.date))

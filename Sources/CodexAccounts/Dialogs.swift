@@ -55,6 +55,8 @@ struct SwitchConfirmation: View {
                 Text("本工具无法判断所有运行中的任务。请先保存编辑，并暂停共享此账号的 CLI。")
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
+            Text("此操作会读取钥匙串中的账号和恢复记录，macOS 可能请求授权。取消授权会停止操作。")
+                .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             if model.demo { Label("演示模式：不会更改账号或重开 App", systemImage: "play.rectangle").font(.caption).foregroundStyle(.secondary) }
             HStack(spacing: 10) {
                 Button("取消", action: cancel).keyboardShortcut(.cancelAction)
