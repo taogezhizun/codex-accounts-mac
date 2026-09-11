@@ -55,7 +55,7 @@ struct SwitchConfirmation: View {
                 Text("本工具无法判断所有运行中的任务。请先保存编辑，并暂停共享此账号的 CLI。")
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             }
-            Text("此操作会读取钥匙串中的账号和恢复记录，macOS 可能请求授权。取消授权会停止操作。")
+            Text("切换前会保存原认证备份，供操作失败时恢复。账号与备份保存在本机私有文件。")
                 .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             if model.demo { Label("演示模式：不会更改账号或重开 App", systemImage: "play.rectangle").font(.caption).foregroundStyle(.secondary) }
             HStack(spacing: 10) {
@@ -94,6 +94,7 @@ struct SettingsView: View {
             Section("外观与隐私") {
                 Picker("外观", selection: $model.appearance) { Text("跟随系统").tag("system"); Text("浅色").tag("light"); Text("深色").tag("dark") }
                 Toggle("隐藏账号邮箱", isOn: $model.hideEmails)
+                Toggle("在状态栏显示剩余额度", isOn: $model.showMenuBarQuota)
                 Text("隐藏邮箱不会隐藏你填写的备注。公开截图请始终使用演示模式。")
                     .font(.caption).foregroundStyle(.secondary)
             }
@@ -101,6 +102,12 @@ struct SettingsView: View {
                 Toggle("自动刷新当前登录账号的额度", isOn: $model.automaticRefresh).disabled(model.demo)
                 RefreshStatusView()
                 Text("只读取 Codex 当前登录账号，每 5 分钟更新一次。其他账号保留上次额度，切换并核对后再更新。后台刷新不读取钥匙串；失败保留缓存并延后重试。")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            Section("本地存储") {
+                if model.needsMigration { MigrationBanner() }
+                else { Text("账号与恢复备份保存在本机私有文件，正常账号操作不访问钥匙串。").font(.callout) }
+                Text("凭据未经过应用层加密，不会主动上传。迁移前的旧钥匙串记录保留但不再使用；系统备份是否包含文件取决于你的备份设置。")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section("应用更新") {
@@ -122,10 +129,12 @@ struct SettingsView: View {
                 Link("项目主页 · 源码与反馈", destination: AppUpdates.projectURL)
                 Link("灵感来源：codex-account-switcher", destination: URL(string: "https://github.com/cjg1995/codex-account-switcher")!)
                 Link("自动刷新设计参考：OpenUsage", destination: URL(string: "https://github.com/robinebers/openusage")!)
+                Link("菜单交互参考：liuzhao1225/codex-account-switcher", destination: URL(string: "https://github.com/liuzhao1225/codex-account-switcher")!)
                 Link("应用更新组件：Sparkle", destination: URL(string: "https://sparkle-project.org")!)
-                Text("独立开发，与 OpenAI 及原项目作者无隶属或背书关系。凭据保存在本机钥匙串，登录和额度查询连接 OpenAI。")
+                Text("独立开发，与 OpenAI 及原项目作者无隶属或背书关系。凭据保存在本机私有文件，登录和额度查询连接 OpenAI。")
                     .font(.caption).foregroundStyle(.secondary)
             }
         }.formStyle(.grouped).padding(10).disabled(model.busy && !model.refreshingAutomatically)
+            .sheet(isPresented: $model.showMigration) { MigrationView().environmentObject(model) }
     }
 }

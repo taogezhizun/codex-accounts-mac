@@ -28,4 +28,29 @@ final class UpdateConfigurationTests: XCTestCase {
         XCTAssertEqual(AppUpdates.profileURL.absoluteString, "https://github.com/taogezhizun")
         XCTAssertEqual(AppUpdates.projectURL.absoluteString, "https://github.com/taogezhizun/codex-accounts-mac")
     }
+    @MainActor func testGentleReminderDoesNotBlockAccountsButInstallSessionDoes() {
+        let updates = AppUpdates(enabled: false)
+        updates.receiveSessionState(true)
+        XCTAssertTrue(updates.sessionInProgress)
+        updates.receiveReminder(version: "99.0", handledBySparkle: false)
+        XCTAssertEqual(updates.availableVersion, "99.0")
+        XCTAssertFalse(updates.sessionInProgress)
+        updates.receiveReminder(version: "99.0", handledBySparkle: true)
+        XCTAssertTrue(updates.sessionInProgress)
+        updates.standardUserDriverWillFinishUpdateSession()
+        updates.receiveSessionState(false)
+        XCTAssertNil(updates.availableVersion)
+        XCTAssertFalse(updates.sessionInProgress)
+    }
+    @MainActor func testCancelledFailedAndFinishedChecksClearOldReminder() {
+        let updates = AppUpdates(enabled: false)
+        for _ in 0..<3 {
+            updates.receiveSessionState(true)
+            updates.receiveReminder(version: "99.0", handledBySparkle: false)
+            updates.receiveSessionState(false)
+            XCTAssertNil(updates.availableVersion)
+            XCTAssertFalse(updates.sessionInProgress)
+        }
+    }
+
 }

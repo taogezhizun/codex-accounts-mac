@@ -24,7 +24,7 @@ for name in sorted(set(filter(None, paths))):
     path = root / name
     if not path.is_file():
         continue
-    if path.name in {"auth.json", ".env", "accounts.json"} or path.suffix in {".log", ".enc", ".keychain", ".keychain-db"}:
+    if path.name in {"auth.json", ".env", "accounts.json", "local-store-v1.json"} or path.suffix in {".log", ".enc", ".keychain", ".keychain-db"}:
         failures.append((name, "runtime/private file"))
     data = path.read_bytes()
     if b"\0" in data:

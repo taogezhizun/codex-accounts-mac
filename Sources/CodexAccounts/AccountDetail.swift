@@ -119,8 +119,8 @@ struct RecoveryBanner: View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: "person.crop.circle.badge.checkmark").font(.title3).foregroundStyle(.orange).padding(.top, 1)
             VStack(alignment: .leading, spacing: 7) {
-                Text(model.recoveryNeedsUnlock ? "恢复记录需要授权读取" : "还差一步：核对桌面账号").font(.callout.weight(.semibold))
-                Text(model.recoveryNeedsUnlock ? "点击检查后才会请求钥匙串授权。确认恢复状态前，暂不切换或自动刷新。" : "本地认证已更新。请检查桌面 App 显示的账号，再确认切换结果。")
+                Text(model.recoveryNeedsUnlock ? "恢复记录需要重新检查" : "还差一步：核对桌面账号").font(.callout.weight(.semibold))
+                Text(model.recoveryNeedsUnlock ? "重新检查本地恢复记录。确认恢复状态前，暂不切换或自动刷新。" : "本地认证已更新。请检查桌面 App 显示的账号，再确认切换结果。")
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 HStack(spacing: 14) {
                     if model.recoveryNeedsUnlock {

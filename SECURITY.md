@@ -8,15 +8,17 @@ Runtime data is outside the source repository:
 
 | Data | Storage |
 | --- | --- |
-| Account snapshots and one recovery journal | macOS login Keychain, service `org.codexaccounts.local-vault.v1`, not synchronizable |
-| Email, nickname, plan and cached quotas | `~/Library/Application Support/CodexAccounts/accounts.json`, mode 0600 |
+| Account snapshots, metadata, quota cache and one recovery journal | `~/Library/Application Support/CodexAccounts/local-store-v1.json`, mode 0600, parent directory 0700 |
+| Legacy records retained after migration | Old `accounts.json` and Keychain service `org.codexaccounts.local-vault.v1`; no longer read or written after migration |
 | App selection and credential-directory selection | App preferences |
 | Temporary browser login data | UUID directory in the app's private Application Support `Sessions` directory; removed after the operation and reaped on next launch after a crash |
 | Active Codex credential | The selected `CODEX_HOME/auth.json`, mode 0600 when written |
 
-Starting in 0.3.2, launching the utility, opening its windows and refreshing quotas do not access the Keychain. Quota queries use only the active Codex login file and never fall back to saved Keychain credentials. Keychain access is reserved for explicit credential operations, including saving/importing or removing an account, switching, restoring, inspecting recovery and recording confirmation. The saved snapshots and recovery journal remain in the Keychain; this change does not migrate them to a plaintext store.
+In 0.4.0, new installations and migrated stores use a private local file. The file contains reusable credentials with JSON/base64 encoding, not application-layer encryption. Unix permissions restrict other macOS users but do not provide per-application access control for processes running as the same user. System backups may include these files depending on backup settings. A fully compromised user session or root can access them.
 
-Keychain access is limited by macOS's access-control behavior for the locally signed app. After an update or ad-hoc rebuild, the next explicit Keychain operation may trigger a new access prompt. This does not protect against a fully compromised macOS user session, root, or a malicious executable approved by the user.
+Legacy startup reads only metadata and offers an optional migration. Only clicking “Start migration” reads registered old Keychain items and the recovery journal; it never enumerates unrelated credentials. Every credential identity and the recovery structure is checked, staged privately and read back before a complete versioned snapshot is atomically activated. Missing items, denial, malformed data and write failure leave migration incomplete; retries do not activate partial data. Incomplete staging is reaped on restart. The instance lock and operation guard prevent overlapping tools, credential operations or update installation during migration.
+
+Old Keychain entries and metadata remain untouched after migration and are not synchronized with new changes. They are not a safe downgrade target. Do not run old and new versions against the same data directory. A corrupt or unsupported active store fails closed without falling back to the Keychain. Removing old records is a separate explicit operation, not part of this migration.
 
 Account JWT payloads are decoded only to label and distinguish snapshots. They are **not** treated as verified cryptographic identity. Only successful authentication in the desktop app confirms the intended runtime identity.
 
@@ -24,11 +26,11 @@ Account JWT payloads are decoded only to label and distinguish snapshots. They a
 
 The app requires the user to pause work before requesting a normal desktop shutdown. After the user confirms a switch, it checks the durable recovery journal before reading the target snapshot or stopping the desktop. A pending, unreadable or malformed journal stops that switch. It never force-kills the desktop app. It checks the Codex descendants of the running desktop process and waits for them to exit. It cannot discover every independently running CLI that shares the same credential directory.
 
-After shutdown it re-reads the departing credentials, archives that fresh snapshot, and writes a durable Keychain recovery journal before changing the live file. New data is written to an exclusive 0600 temporary file, fsynced, and renamed in the same directory. Symlinks in the live credential path are rejected. A file re-read detects changes between backup and write. This narrows concurrency risk but is not a cross-process compare-and-swap guarantee; all clients sharing the directory should be idle.
+After shutdown it re-reads the departing credentials, archives that fresh snapshot, and writes a durable private-file recovery journal before changing the live file. New data is written to an exclusive 0600 temporary file, fsynced, and renamed in the same directory. Symlinks in the live credential path are rejected. A file re-read detects changes between backup and write. This narrows concurrency risk but is not a cross-process compare-and-swap guarantee; all clients sharing the directory should be idle.
 
 A failed launch restores the prior file only while the file still equals the expected old or new bytes. Recovery rejects a different directory or unrelated account. The last recovery snapshot remains after confirmation. A pending journal blocks another switch until the user acknowledges or recovers the operation.
 
-After a crash or relaunch, recovery starts unchecked and is read only when explicitly requested through switching, restoration or recovery inspection. This does not block quota queries using the current login file. A pending journal, failed recovery read or failed switch/restore transaction activates the recovery guard, pausing further switching and quota refresh until resolved. If the Keychain is inaccessible, the app stops credential changes; it does not fall back to a plaintext account store. Removing an account from the list does not delete the recovery journal or log the desktop out.
+On restart, file-backed recovery is loaded with the active store, without Keychain access. A pending journal or failed switch/restore transaction activates the recovery guard, pausing further switching and quota refresh until resolved. While migration is deferred, current-file quota reads remain available and credential mutations are blocked. Removing an account does not delete its recovery backup or log the desktop out.
 
 ## Repository hygiene
 

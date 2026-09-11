@@ -27,7 +27,7 @@ public enum PrivateFiles {
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
     }
 
-    public static func read(_ url: URL) throws -> Data? {
+    public static func read(_ url: URL, maximumBytes: Int = 1_048_576) throws -> Data? {
         try rejectSymlinks(url)
         let fd = open(url.path, O_RDONLY | O_NOFOLLOW)
         if fd == -1 {
@@ -36,7 +36,7 @@ public enum PrivateFiles {
         }
         defer { close(fd) }
         var info = stat()
-        guard fstat(fd, &info) == 0, (info.st_mode & S_IFMT) == S_IFREG, info.st_size <= 1_048_576 else {
+        guard fstat(fd, &info) == 0, (info.st_mode & S_IFMT) == S_IFREG, info.st_size <= maximumBytes else {
             throw AccountsError.message("文件类型或大小异常，已停止读取。")
         }
         let handle = FileHandle(fileDescriptor: fd, closeOnDealloc: false)

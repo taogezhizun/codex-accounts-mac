@@ -14,3 +14,7 @@ auth.json
 
 __pycache__/
 *.pyc
+
+# Runtime account database and interrupted migration data
+local-store-v*.json
+migration-*

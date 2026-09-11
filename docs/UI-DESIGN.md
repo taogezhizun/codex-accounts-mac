@@ -39,3 +39,13 @@ Use the optional `limitName` from the [official rate-limit response](https://lea
 The README opens with a small app icon, one sentence describing its purpose, and architecture-specific DMG downloads. A native app screenshot replaces the icon sizing board; the screenshot is captured from an isolated demo bundle containing only synthetic accounts. Detailed compatibility and validation notes stay available below the installation steps and in the usage guide.
 
 The installer uses a quiet blue-gray background (#F6F7FB), dark headings (#20283D), secondary text (#657087), and a single blue directional arrow (#5572D8). System semibold type introduces installation; regular system type explains the drag action. The real app and Applications icons are Finder items, with fixed positions in a 640 by 400 window. Original AppKit artwork includes 1x and 2x representations. No account data or third-party artwork is used.
+
+## 0.4.0 menu and status bar
+
+Keep the existing native SF type, semantic light/dark colors and original cobalt exchange mark. Current credentials get a restrained accent background and an explicit label. Each menu row has its real Codex period, remaining percentage, 3-point meter and cache age; inactive accounts always say “last record”. Scrolling and search stay available. Recovery moves into More, while pending recovery remains prominent.
+
+The menu-bar template icon gains a monospaced percentage (13-point semibold). Unknown/pending is a dash, stale cache has a tilde; the tooltip names the selected period and actual timestamp with the same email masking preference. A small setting can hide the percentage. A passive update row is shown only while Sparkle has a valid reminder; no animation or extra network loop is added.
+
+The non-blocking migration banner opens a native explanation sheet. It states the unencrypted-file tradeoff, possible old Keychain prompts, deferred behavior and downgrade boundary before the user starts migration. Busy migration disables dismissal and account mutations; errors stay visible and can be retried.
+
+Menu layout and local-file storage ideas also reference [liuzhao1225/codex-account-switcher](https://github.com/liuzhao1225/codex-account-switcher). All implementation and artwork here remain independently authored. See the [source review](research/liuzhao1225-experience-review.md).

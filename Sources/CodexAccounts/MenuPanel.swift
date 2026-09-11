@@ -25,10 +25,11 @@ struct MenuPanel: View {
                         .buttonStyle(.plain).foregroundStyle(.secondary).accessibilityLabel(model.hideEmails ? "显示邮箱" : "隐藏邮箱")
                 }.padding(18)
                 if let error = model.error { ErrorBanner(message: error) { model.error = nil }.padding([.horizontal, .bottom], 14) }
+                if model.needsMigration { MigrationBanner().padding([.horizontal, .bottom], 14) }
                 if model.awaitingConfirmation {
                     VStack(alignment: .leading, spacing: 9) {
-                        Label(model.recoveryNeedsUnlock ? "恢复记录需要授权" : "请先核对上次切换", systemImage: "clock.badge.checkmark").font(.callout.weight(.medium))
-                        Text(model.recoveryNeedsUnlock ? "点击检查后再请求钥匙串授权。" : "检查桌面 App 的账号，确认后才能继续切换。").font(.caption).foregroundStyle(.secondary)
+                        Label(model.recoveryNeedsUnlock ? "恢复记录需要检查" : "请先核对上次切换", systemImage: "clock.badge.checkmark").font(.callout.weight(.medium))
+                        Text(model.recoveryNeedsUnlock ? "重新检查本地恢复记录。" : "检查桌面 App 的账号，确认后才能继续切换。").font(.caption).foregroundStyle(.secondary)
                         HStack {
                             if model.recoveryNeedsUnlock { Button("检查恢复记录…") { model.unlockRecoveryRecord() } }
                             else { Button("已核对") { model.confirmDesktopAccount() }; Button("恢复…") { recovering = true } }
@@ -55,7 +56,7 @@ struct MenuPanel: View {
                                     .disabled(model.busy || (account.id != model.currentIdentity && model.switchBlockReason(account.id) != nil))
                                 }
                             }.padding(.horizontal, 8)
-                        }.frame(height: min(CGFloat(accounts.count) * 74, 340))
+                        }.frame(height: min(CGFloat(accounts.count) * 100, 340))
                     }
                 } else {
                     VStack(alignment: .leading, spacing: 10) {
@@ -72,16 +73,22 @@ struct MenuPanel: View {
                     }.padding(.horizontal, 18).padding(.vertical, 10)
                 }
                 if !model.demo { RefreshStatusView().padding(.horizontal, 18).padding(.bottom, 10) }
+                MenuUpdateNotice(updates: model.updates).padding(.horizontal, 14)
                 Divider()
                 HStack {
                     Button { openWindow(id: "accounts"); NSApp.activate(ignoringOtherApps: true) } label: { Label("管理账号", systemImage: "sidebar.left") }
                     Spacer()
-                    if model.hasBackup || model.recoveryNeedsUnlock { Button { recovering = true } label: { Image(systemName: "clock.arrow.circlepath") }.help("恢复上次认证").disabled(model.busy || model.demo) }
+                    Menu {
+                        Button("恢复上次认证…") { recovering = true }
+                            .disabled((!model.hasBackup && !model.recoveryNeedsUnlock) || model.credentialActionsBlocked)
+                        CheckForAppUpdates(updates: model.updates)
+                    } label: { Image(systemName: "ellipsis") }.help("更多操作")
                     SettingsLink { Image(systemName: "gearshape") }.help("设置")
                     Button { NSApp.terminate(nil) } label: { Image(systemName: "power") }.help("退出 Codex Accounts").disabled(model.busy)
                 }.buttonStyle(.borderless).padding(15)
             }
         }.frame(width: 368).onAppear { model.checkCurrentIdentity() }
+            .sheet(isPresented: $model.showMigration) { MigrationView().environmentObject(model) }
     }
 }
 
@@ -102,15 +109,18 @@ private struct QuickAccountRow: View {
                         if let quota = QuotaPresentation.summary(account.quotas) {
                             Text("·").foregroundStyle(.tertiary)
                             Text("Codex \(QuotaPresentation.duration(quota))剩余 \(Int(quota.remaining))%").font(.system(size: 10)).foregroundStyle(.secondary).monospacedDigit()
-                            if AccountPresentation.needsRefresh(account) {
-                                Image(systemName: "clock").font(.system(size: 10)).foregroundStyle(.secondary).help("缓存可能已过期，请在管理窗口刷新")
-                            }
+
                         } else { Text("· Codex 额度未读取").font(.system(size: 10)).foregroundStyle(.secondary) }
+                    }
+                    if let quota = QuotaPresentation.summary(account.quotas) { QuotaMeter(window: quota, height: 3) }
+                    TimelineView(.periodic(from: .now, by: 60)) { context in
+                        Text("\(!current || AccountPresentation.needsRefresh(account, now: context.date) ? "上次记录 · " : "")\(AccountPresentation.updatedLabel(account, now: context.date))")
+                            .font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(1)
                     }
                 }
                 Image(systemName: current ? "arrow.up.forward" : "arrow.right").font(.caption.weight(.medium)).foregroundStyle(hovered ? .primary : .tertiary)
             }.padding(.horizontal, 11).padding(.vertical, 12)
-                .background(hovered ? Color.primary.opacity(0.055) : .clear, in: RoundedRectangle(cornerRadius: 10))
+                .background(current ? Color.accentColor.opacity(hovered ? 0.13 : 0.08) : hovered ? Color.primary.opacity(0.055) : .clear, in: RoundedRectangle(cornerRadius: 10))
                 .contentShape(RoundedRectangle(cornerRadius: 10))
         }.buttonStyle(.plain).onHover { hovered = $0 }
             .help(current ? "打开桌面 App" : "查看切换确认")

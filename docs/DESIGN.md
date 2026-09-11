@@ -5,7 +5,7 @@ A small native utility using Sparkle for signed in-place app updates. SwiftUI su
 ## Modules
 
 - `AccountsCore`: snapshot identity, quota parsing, private file I/O, storage guards and switch/recovery transaction ordering.
-- `CodexAccounts`: Keychain storage, app-server transport, isolated sessions, desktop lifecycle and SwiftUI presentation.
+- `CodexAccounts`: atomic local-file storage and read-only legacy Keychain migration, app-server transport, isolated sessions, desktop lifecycle and SwiftUI presentation.
 - `AccountsCoreTests`: synthetic credentials, file permissions and injected lifecycle failures.
 - `CodexAccountsTests`: UI presentation, current-account refresh scheduling, recovery lifecycle with an injected Keychain query spy, and an opt-in real-CLI smoke test in a fresh empty home.
 
@@ -17,7 +17,11 @@ A login helper receives a newly allocated private home and a small allowlist of 
 
 ## Recovery lifecycle
 
-Startup loads local metadata and the current file identity without probing the Keychain. Recovery begins unchecked; current-file quota queries can proceed. A user-confirmed switch reads the durable journal before target credentials or desktop shutdown, stopping on a pending, denied or malformed record. Restore also loads the journal on demand. Before entering a switch/restore transaction, the model conservatively invalidates its recovery state; success marks it pending confirmation, while failure leaves it guarded. Ordinary operation completion never re-reads the journal. Saved snapshots and the journal remain in the Keychain.
+`AccountStore` owns a versioned `local-store-v1.json` snapshot containing account metadata, full credentials and the recovery journal. Mutations validate and atomically replace the whole snapshot; in-memory state changes only after a successful commit. The 64 MiB total size limit is checked before writing and reading. Per-credential validation retains the 1 MiB limit. No account identity or email appears in runtime filenames.
+
+If the active file is absent but legacy `accounts.json` exists (even if empty), startup enters migration-required state without querying Keychain. Explicit migration reads only registered account keys and `switch-recovery`, validates all identities and backup fields, writes and rereads a private staging file, then commits one coherent snapshot. Failure never activates partial data. Old records remain unused. A single atomic snapshot avoids partial activation across separate metadata, credential and recovery files.
+
+File-backed startup reads the journal without a system authorization prompt. A pending journal stops switching and refreshing until confirmed or restored. A user-confirmed switch checks the journal before target credentials or desktop shutdown. Before the switch/restore transaction the model conservatively invalidates recovery state; failure retains that guard. Migration runs off the main thread while the model operation guard blocks all store mutations and update installation.
 
 ## Compatibility
 
@@ -33,4 +37,6 @@ The original Windows project was reviewed during feasibility assessment. The imp
 
 `Presentation.swift` contains masking, ordering, quota freshness and original icon geometry. The main window, account details, menu panel and dialogs live in separate view files. Both switching entry points share the same target confirmation component and eligibility checks. UI preferences use local UserDefaults; demo mode does not persist them or initialize the credential store. See [UI design](UI-DESIGN.md).
 
-`RefreshSchedule` schedules only the current saved account and retains its retry cadence, serialized through the existing operation guard. `AppUpdates` wraps Sparkle; update sessions and account operations cannot start concurrently. Downloaded archives and feeds require EdDSA signatures. See [update design](UPDATES.md).
+`StatusBarQuota` projects the current saved identity to its lowest Codex remaining percentage, with distinct pending/unknown and stale states. The menu-bar label observes model state without additional network or Keychain calls.
+
+`RefreshSchedule` schedules only the current saved account and retains its retry cadence, serialized through the existing operation guard. `AppUpdates` wraps Sparkle; active update dialogs/installations and account operations cannot start concurrently; a passive gentle reminder does not block account work. Downloaded archives and feeds require EdDSA signatures. See [update design](UPDATES.md).

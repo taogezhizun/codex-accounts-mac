@@ -15,13 +15,13 @@ import AppKit
                 CheckForAppUpdates(updates: model.updates).environmentObject(model)
             }
             CommandGroup(replacing: .newItem) {
-                Button("浏览器添加账号…") { model.addViaLogin() }.keyboardShortcut("n").disabled(model.busy || model.demo)
+                Button("浏览器添加账号…") { model.addViaLogin() }.keyboardShortcut("n").disabled(model.credentialActionsBlocked)
             }
         }
         MenuBarExtra {
             MenuPanel().environmentObject(model).preferredColorScheme(model.preferredColorScheme)
         } label: {
-            Image(nsImage: SwitchGlyph.menuBarImage).accessibilityLabel("Codex Accounts 快速切换")
+            StatusBarLabel().environmentObject(model)
         }.menuBarExtraStyle(.window)
         Settings { SettingsView().environmentObject(model).preferredColorScheme(model.preferredColorScheme).frame(width: 540) }
         Window("快速切换", id: "menu-preview") {

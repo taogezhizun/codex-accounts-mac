@@ -33,13 +33,14 @@ struct AccountsView: View {
                 Divider().padding(.horizontal, 14)
                 HStack(spacing: 7) {
                     Image(systemName: model.demo ? "play.rectangle" : "lock.shield")
-                    Text(model.demo ? "虚构账号 · 安全演示" : "仅保存在这台 Mac").font(.caption)
+                    Text(model.demo ? "虚构账号 · 安全演示" : "本机文件存储").font(.caption)
                     Spacer()
                 }.foregroundStyle(.secondary).padding(16)
             }
             .navigationSplitViewColumnWidth(min: 240, ideal: 260, max: 300)
         } detail: {
             VStack(spacing: 0) {
+                if model.needsMigration { MigrationBanner().padding([.top, .horizontal], 24) }
                 if model.awaitingConfirmation {
                     RecoveryBanner { showRestore = true }.padding([.top, .horizontal], 24)
                 }
@@ -74,7 +75,7 @@ struct AccountsView: View {
                     .help(model.hideEmails ? "显示邮箱（⇧⌘P）" : "隐藏邮箱（⇧⌘P）")
                     .accessibilityLabel(model.hideEmails ? "显示邮箱" : "隐藏邮箱")
                     .keyboardShortcut("p", modifiers: [.command, .shift])
-                AddAccountMenu().disabled(model.busy || model.demo)
+                AddAccountMenu().disabled(model.credentialActionsBlocked)
                 Menu {
                     Button("打开桌面 App") { model.openDesktop() }.disabled(model.busy || model.demo)
                     Button("恢复上次认证…") { showRestore = true }.disabled((!model.hasBackup && !model.recoveryNeedsUnlock) || model.busy || model.demo)
@@ -83,6 +84,7 @@ struct AccountsView: View {
                 } label: { Label("更多操作", systemImage: "ellipsis.circle") }.help("更多操作")
             }
         }
+        .sheet(isPresented: $model.showMigration) { MigrationView().environmentObject(model) }
         .sheet(item: $pendingSwitch) { account in RestartSheet(target: account) }
         .sheet(isPresented: $showRestore) { RestartSheet(target: nil) }
         .sheet(item: $pendingRename) { account in RenameSheet(account: account) }

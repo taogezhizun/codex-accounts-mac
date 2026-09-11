@@ -7,6 +7,11 @@ import AccountsCore
     @Published var hideEmails = true {
         didSet { if !demo { defaults.set(hideEmails, forKey: "hideEmails") } }
     }
+    @Published var showMenuBarQuota = true {
+        didSet { if !demo { defaults.set(showMenuBarQuota, forKey: "showMenuBarQuota") } }
+    }
+    @Published private(set) var needsMigration = false
+    @Published var showMigration = false
     @Published var appearance = "system" {
         didSet { if !demo { defaults.set(appearance, forKey: "appearance") } }
     }
@@ -19,6 +24,7 @@ import AccountsCore
             }
         }
     }
+    @Published private(set) var quotaDisplayDate = Date()
     @Published private(set) var nextRefresh: Date?
     @Published private(set) var refreshingAutomatically = false
     let updates: AppUpdates
@@ -53,12 +59,15 @@ import AccountsCore
         application = demo ? nil : defaults.string(forKey: "desktopApplication").map { URL(fileURLWithPath: $0) } ?? Desktop.discover()
         if demo {
             loadDemo()
+            if PreviewConfiguration.variant == "migration" { needsMigration = true }
+            if PreviewConfiguration.variant == "update" { updates.receiveReminder(version: "0.5.0（演示）", handledBySparkle: false) }
             if (CommandLine.arguments.contains("--demo-empty") || PreviewConfiguration.variant == "empty") { accounts = []; selection = nil; currentIdentity = nil }
             if (CommandLine.arguments.contains("--demo-pending") || PreviewConfiguration.variant == "pending") { awaitingConfirmation = true; hasBackup = true; currentIdentity = selection; status = "演示：桌面 App 已重开，请核对账号。" }
             if (CommandLine.arguments.contains("--demo-dark") || PreviewConfiguration.variant == "dark") { appearance = "dark" }
             if PreviewConfiguration.variant == "recovery-lock" { recoveryNeedsUnlock = true; awaitingConfirmation = true; hasBackup = false }
             return
         }
+        showMenuBarQuota = defaults.object(forKey: "showMenuBarQuota") as? Bool ?? true
         automaticRefresh = defaults.object(forKey: "automaticRefresh") as? Bool ?? true
         hideEmails = defaults.object(forKey: "hideEmails") as? Bool ?? true
         appearance = defaults.string(forKey: "appearance") ?? "system"
@@ -68,9 +77,9 @@ import AccountsCore
             store = try AccountStore(directory: root, vault: vault)
             accounts = store!.accounts
             selection = accounts.first?.id
-            // Do not probe the login Keychain here, even with a "no UI" query flag.
-            // The encrypted journal is checked before an explicit switch or restore.
-            recoveryNeedsUnlock = true
+            needsMigration = store!.needsMigration
+            // Legacy records are accessed only by the explicit migration action.
+            if !needsMigration { _ = try loadRecoveryState() }
             refreshFileIdentity()
             status = accounts.isEmpty ? "从添加一个账号开始。" : "选择账号，随时切换。"
         } catch { self.error = "本地账号库无法打开。\(safeMessage(error))" }
@@ -97,7 +106,9 @@ import AccountsCore
         nextRefresh = automaticRefresh ? currentIdentity.flatMap { refreshSchedule.next[$0] } : nil
     }
     func automaticRefreshTick(now: Date = Date()) {
-        guard !demo, !busy, !updates.sessionInProgress else { return }
+        guard !demo else { return }
+        quotaDisplayDate = now
+        guard !busy, !updates.sessionInProgress else { return }
         refreshFileIdentity(now: now)
         updateNextRefresh()
         guard let id = refreshSchedule.due(now: now, enabled: automaticRefresh,
@@ -107,11 +118,13 @@ import AccountsCore
 
     var selected: Account? { accounts.first { $0.id == selection } }
     var configured: Bool { application != nil && store != nil }
+    var credentialActionsBlocked: Bool { needsMigration || busy || updates.sessionInProgress || demo }
     var canCancel: Bool { session != nil }
     var currentAccount: Account? { accounts.first { $0.id == currentIdentity } }
     var preferredColorScheme: ColorScheme? { appearance == "dark" ? .dark : appearance == "light" ? .light : nil }
     func title(_ account: Account) -> String { AccountPresentation.title(account, hideEmails: hideEmails) }
     func switchBlockReason(_ id: String) -> String? {
+        if needsMigration { return "请先迁移已保存账号" }
         if busy { return "请等待当前操作完成" }
         if updates.sessionInProgress { return "请先完成或关闭应用更新窗口" }
         if awaitingConfirmation { return "请先核对或恢复上次切换" }
@@ -129,6 +142,7 @@ import AccountsCore
     }
 
     func chooseApplication() {
+        guard !busy, !updates.sessionInProgress, !demo else { return }
         let panel = NSOpenPanel(); panel.allowedContentTypes = [.applicationBundle]; panel.canChooseDirectories = false
         panel.message = "选择 Codex 桌面 App（也可能显示为 ChatGPT）。"
         if panel.runModal() == .OK, let url = panel.url {
@@ -137,6 +151,7 @@ import AccountsCore
         }
     }
     func chooseHome() {
+        guard !busy, !updates.sessionInProgress, !demo else { return }
         let panel = NSOpenPanel(); panel.canChooseFiles = false; panel.canChooseDirectories = true; panel.showsHiddenFiles = true
         panel.message = "选择桌面 App 使用的 Codex 目录。通常是用户目录下的 .codex。"
         if panel.runModal() == .OK, let url = panel.url {
@@ -144,24 +159,27 @@ import AccountsCore
         }
     }
     func importCurrent() {
+        guard allowCredentialAction() else { return }
         run("正在保存当前账号…") {
             let desktop = try self.desktop(); try desktop.preflight()
             guard let data = try desktop.readLive() else { throw AccountsError.message("当前目录没有 auth.json。请先在桌面 App 登录，或检查设置中的认证目录。") }
             try self.importData(data); self.refreshFileIdentity()
-            self.status = "当前账号已保存到本机钥匙串。"
+            self.status = "当前账号已保存到本机私有文件。"
         }
     }
     func importFile() {
+        guard allowCredentialAction() else { return }
         let panel = NSOpenPanel(); panel.allowedContentTypes = [.json]; panel.allowsMultipleSelection = false
         panel.message = "导入你自己的 ChatGPT 登录凭据。文件不会复制到项目目录。"
         if panel.runModal() == .OK, let url = panel.url {
             run("正在导入账号…") {
                 guard let data = try PrivateFiles.read(url.resolvingSymlinksInPath()) else { throw AccountsError.message("文件不存在。") }
-                try self.importData(data); self.status = "账号已保存到本机钥匙串。"
+                try self.importData(data); self.status = "账号已保存到本机私有文件。"
             }
         }
     }
     func addViaLogin(device: Bool = false) {
+        guard allowCredentialAction() else { return }
         run("正在准备浏览器登录…") {
             let desktop = try self.desktop()
             let helper = try self.makeSession(); self.session = helper
@@ -257,6 +275,7 @@ import AccountsCore
         }
     }
     func restore() {
+        guard allowCredentialAction() else { return }
         run("正在准备恢复…") {
             guard let backup = try self.loadRecoveryState() else { throw AccountsError.message("没有可恢复的备份。") }
             self.invalidateRecoveryState()
@@ -267,7 +286,7 @@ import AccountsCore
         }
     }
     func confirmDesktopAccount() {
-        guard !demo, !busy, !recoveryNeedsUnlock else { return }
+        guard allowCredentialAction(), !recoveryNeedsUnlock else { return }
         do {
             try store?.confirmBackup(); awaitingConfirmation = false
             status = "已记录你的核对结果。上一次认证备份仍可恢复。"
@@ -275,14 +294,32 @@ import AccountsCore
         } catch { self.error = safeMessage(error) }
     }
     func rename(_ id: String, nickname: String) {
-        guard !demo, let store, let i = store.accounts.firstIndex(where: { $0.id == id }) else { return }
+        guard allowCredentialAction(), let store, let i = store.accounts.firstIndex(where: { $0.id == id }) else { return }
         store.accounts[i].nickname = String(nickname.trimmingCharacters(in: .whitespacesAndNewlines).prefix(80))
         do { try store.save(); sync() } catch { self.error = safeMessage(error) }
     }
     func delete(_ id: String) {
-        guard !demo, let store else { return }
+        guard allowCredentialAction(), let store else { return }
         do { try store.delete(id); sync(); selection = accounts.first?.id; status = "已从本工具移除账号，桌面 App 的登录未更改。" }
         catch { self.error = safeMessage(error) }
+    }
+    private func allowCredentialAction() -> Bool {
+        guard !demo, !busy, !updates.sessionInProgress else { return false }
+        if needsMigration { showMigration = true; return false }
+        return true
+    }
+    func migrateAccounts() {
+        guard needsMigration, let store else { return }
+        run("正在迁移已保存账号，请处理系统授权提示…") {
+            // Keep the main thread responsive while the OS waits for legacy Keychain consent.
+            // busy prevents all model/store mutations until this worker has returned.
+            try await Task.detached { try store.migrate() }.value
+            self.needsMigration = store.needsMigration
+            self.sync()
+            _ = try self.loadRecoveryState()
+            self.showMigration = false
+            self.status = "迁移完成。今后的账号操作使用本地文件，旧钥匙串记录保留但不再使用。"
+        }
     }
     private func importData(_ data: Data) throws {
         guard let store else { throw AccountsError.message("本地账号库未就绪。") }
@@ -342,7 +379,7 @@ import AccountsCore
         }
     }
     func unlockRecoveryRecord() {
-        guard !demo, !busy, !updates.sessionInProgress else { return }
+        guard allowCredentialAction() else { return }
         error = nil
         do {
             _ = try loadRecoveryState()
@@ -352,7 +389,7 @@ import AccountsCore
     }
     private func safeMessage(_ error: Error) -> String {
         if let known = error as? AccountsError { return known.localizedDescription }
-        return "本地操作失败，请检查应用设置、文件权限和钥匙串访问。"
+        return "本地操作失败，请检查应用设置、文件权限；迁移旧数据时还需允许钥匙串访问。"
     }
     private func loadDemo() {
         // Entirely synthetic UI data. Demo mode never initializes the store, Keychain or RPC.

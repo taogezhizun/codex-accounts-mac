@@ -16,11 +16,11 @@
 <p align="center"><sub>演示界面 · 账号与额度均为虚构</sub></p>
 
 - **切换账号** — 在主窗口或菜单栏选择账号，确认后重开 Codex 桌面 App。
-- **掌握额度** — 每 5 分钟读取当前登录账号的额度，其他账号显示上次缓存。
-- **本机保存** — 已保存账号的凭据与恢复备份留在 macOS 钥匙串。
-- **应用内更新** — 从设置检查新版，确认后直接替换升级。
+- **掌握额度** — 状态栏直接显示当前账号剩余百分比；每 5 分钟刷新，其他账号保留上次缓存。
+- **本机保存** — 账号与恢复备份保存在本机私有文件；旧版账号可主动迁移。
+- **应用内更新** — 菜单内提示新版本，确认后原位升级。
 
-**0.3.2 起，打开工具和刷新额度不访问钥匙串。** 额度查询读取 Codex 当前登录文件；主动保存、切换、恢复等账号操作才可能请求钥匙串授权。详见[钥匙串与授权](docs/USAGE.md#钥匙串与授权)。
+**0.4.0 开发版本：本地文件存储 + 状态栏额度。** 新安装和完成迁移后的账号操作不访问钥匙串；旧数据仅在你点击“开始迁移”时请求读取授权。文件保存完整登录凭据，未经过应用层加密。详见[本地存储与迁移](docs/USAGE.md#本地存储与迁移)。本页下载按钮仍指向最新正式发行版，0.4.0 尚未发布。
 
 ## 安装
 
@@ -48,7 +48,7 @@
 
 支持 ChatGPT 登录和文件认证；暂不支持 API Key、系统 keyring 认证或受管理的认证策略。需要已安装官方 Codex 桌面 App，认证目录必须与它一致。共用同一认证目录的其他客户端可能受到切换影响。
 
-Apple Silicon 已完成本地构建与演示检查；Intel 已构建，尚待实机验收。57 项本地测试及隔离更新测试通过。真实账号登录、自动额度刷新、桌面切换与恢复仍需本机验收；不将“认证文件已替换”视为“桌面登录已验证”。详见[验收清单](docs/VALIDATION.md)。
+Apple Silicon 已完成本地构建与演示检查；Intel 已构建，尚待实机验收。当前开发版的测试与打包结果见验收记录。真实账号登录、自动额度刷新、桌面切换与恢复仍需本机验收；不将“认证文件已替换”视为“桌面登录已验证”。详见[验收清单](docs/VALIDATION.md)。
 
 </details>
 
@@ -77,5 +77,7 @@ python3 scripts/privacy-check.py
 该项目的公开实现曾用于评估可移植性；本仓库根据功能需求与官方协议重新实现，没有复制或逐行翻译其源代码，也没有使用其图标、截图或文档。上游在 2026-09-10 核查时未声明许可证，因此这里的 MIT 许可仅覆盖本仓库的原创内容，不授予上游代码的使用权。
 
 本项目采用 [MIT License](LICENSE)。接口依据：[OpenAI Authentication](https://learn.chatgpt.com/docs/auth)、[Codex App Server](https://learn.chatgpt.com/docs/app-server)；UI 使用 Apple SwiftUI / AppKit；应用更新使用 [Sparkle 2.9.6](https://sparkle-project.org)，保留其[完整许可证](docs/licenses/Sparkle.txt)。自动刷新节奏与缓存反馈参考 [OpenUsage](https://github.com/robinebers/openusage/blob/main/docs/refreshing.md)，未复制其实现或素材。
+
+0.4.0 的紧凑菜单、当前行高亮与文件存储思路参考 [liuzhao1225/codex-account-switcher](https://github.com/liuzhao1225/codex-account-switcher)。实现独立编写，未复制其源码或素材；上游采用 MIT 许可。
 
 维护者签名和发布步骤见 [更新与发布](docs/UPDATES.md)。

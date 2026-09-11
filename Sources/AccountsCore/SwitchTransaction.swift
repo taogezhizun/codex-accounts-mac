@@ -33,7 +33,7 @@ public enum SwitchOutcome { case awaitingDesktopConfirmation }
         let previous = try env.readLive()
         if let previous { try env.archiveDeparting(previous) }
         let backup = SwitchBackup(previous: previous, targetIdentity: targetAuth.identity, home: env.homePath)
-        try env.saveBackup(backup) // Durable encrypted backup must precede the first live write.
+        try env.saveBackup(backup) // Durable private backup must precede the first live write.
         guard try env.readLive() == previous else {
             throw AccountsError.message("认证被其他程序修改，本次切换已停止；请重新打开桌面 App。")
         }
