@@ -20,6 +20,12 @@ The signing key was generated with Sparkle’s `generate_keys --account org.code
 
 Ad-hoc app signing supports self-use without a paid Apple developer account. EdDSA updates do not replace Apple notarization. Sparkle’s complete license, including its dependencies’ notices, is retained in `docs/licenses/Sparkle.txt` and the distributed app.
 
+## Commit attribution and privacy
+
+Configure this repository's Git author with your public GitHub username and the GitHub-provided `noreply` address from your account's email settings. Use repository-local configuration so other projects keep their own author settings. Check both `git var GIT_AUTHOR_IDENT` and `git var GIT_COMMITTER_IDENT` before publishing; do not substitute a generic project identity or invent a shared `noreply` address. Never use a private personal or work email for public commits.
+
+After pushing, verify that GitHub associates the commit with the intended account. Changing local author settings applies to future commits only; it does not reattribute historical commits. Preserve published release tags and history unless a separate history migration is explicitly agreed. See [GitHub's commit email guidance](https://docs.github.com/en/account-and-profile/how-tos/email-preferences/setting-your-commit-email-address).
+
 ## Release procedure
 
 1. Update the display version and increment `CFBundleVersion` in `resources/Info.plist`; keep the public signing key unchanged. Run tests and the privacy scan.
