@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Check source candidates without printing the matched sensitive values."""
 import pathlib
+import hashlib
 import re
 import subprocess
 import sys
@@ -35,7 +36,10 @@ for name in sorted(set(filter(None, paths))):
     for label, pattern in patterns.items():
         if pattern.search(text):
             failures.append((name, label))
-    if any(m.group(1).lower() not in {"example.com", "example.org", "users.noreply.github.com"} for m in email.finditer(text)):
+    # Preserve the exact upstream copyright notice, including its author's public email.
+    # A content hash prevents this narrow exception from admitting appended private data.
+    upstream_license = name == "docs/licenses/Sparkle.txt" and hashlib.sha256(data).hexdigest() == "389a4e4e9a32f059775b13a06e25a591445ba229d2838d26dd3e7c0c45127cfe"
+    if not upstream_license and any(m.group(1).lower() not in {"example.com", "example.org", "users.noreply.github.com"} for m in email.finditer(text)):
         failures.append((name, "non-example email"))
 for name, label in failures:
     print(f"FAIL {name}: {label}", file=sys.stderr)

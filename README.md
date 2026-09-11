@@ -2,16 +2,18 @@
 
 一个用 SwiftUI 编写的原生 Mac 菜单栏工具，用于保存自己的多个 ChatGPT 登录账号，并通过正常退出、切换认证、重新打开的方式切换 Codex 桌面 App 账号。
 
-**当前状态：0.2.1 开发预览。** 已通过核心自动化测试、真实 Codex 程序的无登录隔离协议测试与演示界面检查。真实账号之间的浏览器登录、额度读取、桌面切换与恢复仍需要用户本机验收。不能将“认证文件已替换”当作“桌面 App 已登录成功”。
+**当前状态：0.3.0 开发预览，待签名发布。** 已通过核心自动化测试、真实 Codex 程序的无登录隔离协议测试与演示界面检查。真实账号之间的浏览器登录、额度读取、桌面切换与恢复仍需要用户本机验收。不能将“认证文件已替换”当作“桌面 App 已登录成功”。
 
 ![原创图标及尺寸预览](docs/images/icon-preview.png)
+
+开发与维护：[taogezhizun](https://github.com/taogezhizun) · [项目主页与反馈](https://github.com/taogezhizun/codex-accounts-mac)
 
 ## 功能
 
 - 原生双栏窗口与可搜索的菜单栏快速切换面板，支持备注、深浅色和默认隐藏邮箱。
 - 从当前认证、选定 JSON 或 OpenAI 浏览器／设备码登录添加账号。
 - 凭据与恢复备份保存在本机 Keychain；账号元数据保存在 Application Support。
-- 显式刷新额度，保留不同额度桶，未知额度不会显示为零。
+- 启动时及每 5 分钟自动刷新额度，可暂停或手动刷新；失败保留缓存并退避重试。
 - 切换前备份，正常退出桌面 App，原子替换认证后重开；支持恢复与人工核对状态。
 
 ## 支持范围
@@ -37,6 +39,12 @@ open "dist/Codex Accounts.app"
 
 首次保存凭据时，系统可能要求允许钥匙串访问。自行重新构建后，因签名身份变化，可能再次询问。不要关闭系统安全保护。
 
+## 应用内更新
+
+0.3.0 起，点击菜单栏应用菜单或“设置 → 应用更新 → 检查更新…”。发现新版后确认安装，Sparkle 会替换正在使用的工具并重新打开。只重开本工具，账号、备注、钥匙串和 Codex 桌面 App 保持原位。
+
+**0.2.x 需要最后手动升级一次**：退出旧工具，把新版本拖到“应用程序”，替换同名 App，之后从同一位置启动。不要从下载压缩包或只读磁盘映像里长期运行。更新采用 HTTPS、Ed25519 签名和提取前校验，签名私钥不在仓库中；它不等于 Apple 公证，macOS 钥匙串仍可能在升级后重新请求访问。
+
 ## 首次使用
 
 1. 在设置中确认桌面 App 和认证目录。
@@ -45,7 +53,9 @@ open "dist/Codex Accounts.app"
 4. 暂停桌面中的任务后，选择新账号并点击“切换至此账号…”，核对来源与目标后确认“切换并重开”。
 5. 在重新打开的桌面 App 中核对账号，再点击工具中的“已核对，账号正确”；失败时使用“恢复上次认证”。
 
-额度查询使用隔离辅助进程和 externally managed token 模式，不在第二个进程中刷新保存的 refresh token。access token 过期后需重新登录，或从仍登录的桌面 App 重新保存当前账号。工具不会发送预热消息、消费额度重置券或进行自动轮换。
+自动刷新默认开启：启动后刷新已保存账号，正常间隔 5 分钟，唤醒后补刷到期账号；同一时间只刷新一个账号。失败按 10、20、40、60 分钟退避，恢复成功后回到 5 分钟。登录、切换、待核对和应用更新期间暂停自动刷新。设置中可以关闭，⌘R 仍可立即刷新。
+
+额度查询使用隔离辅助进程和 externally managed token 模式，不在第二个进程中刷新保存的 refresh token。当前桌面认证与已保存身份一致时，额度查询可使用桌面最新 access token；其他账号的 access token 过期后仍需重新登录或重新保存。工具不会发送预热消息、消费额度重置券或进行自动轮换。
 
 ## 日常操作
 
@@ -94,4 +104,6 @@ open "dist/Codex Accounts.app" --args --demo
 
 该项目的公开实现曾用于评估可移植性；本仓库根据功能需求与官方协议重新实现，没有复制或逐行翻译其源代码，也没有使用其图标、截图或文档。上游在 2026-09-10 核查时未声明许可证，因此这里的 MIT 许可仅覆盖本仓库的原创内容，不授予上游代码的使用权。
 
-本项目采用 [MIT License](LICENSE)。接口依据：[OpenAI Authentication](https://learn.chatgpt.com/docs/auth)、[Codex App Server](https://learn.chatgpt.com/docs/app-server)；UI 使用 Apple SwiftUI / AppKit 系统框架，无第三方包依赖。
+本项目采用 [MIT License](LICENSE)。接口依据：[OpenAI Authentication](https://learn.chatgpt.com/docs/auth)、[Codex App Server](https://learn.chatgpt.com/docs/app-server)；UI 使用 Apple SwiftUI / AppKit；应用更新使用 [Sparkle 2.9.6](https://sparkle-project.org)，保留其[完整许可证](docs/licenses/Sparkle.txt)。自动刷新节奏与缓存反馈参考 [OpenUsage](https://github.com/robinebers/openusage/blob/main/docs/refreshing.md)，未复制其实现或素材。
+
+维护者签名和发布步骤见 [更新与发布](docs/UPDATES.md)。

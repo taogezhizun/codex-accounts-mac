@@ -95,22 +95,35 @@ struct SettingsView: View {
                 Text("隐藏邮箱不会隐藏你填写的备注。公开截图请始终使用演示模式。")
                     .font(.caption).foregroundStyle(.secondary)
             }
+            Section("额度刷新") {
+                Toggle("自动刷新已保存账号的额度", isOn: $model.automaticRefresh).disabled(model.demo)
+                RefreshStatusView()
+                Text("启动时刷新，此后每 5 分钟自动更新。失败保留上次结果，并延后重试；可随时手动刷新。切换或登录期间暂停自动刷新。")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+            Section("应用更新") {
+                UpdateSettingsView(updates: model.updates)
+            }
             Section("桌面 App") {
                 LabeledContent("已选择", value: model.application?.lastPathComponent ?? "未找到")
-                Button("选择桌面 App…") { model.chooseApplication() }.disabled(model.demo)
+                Button("选择桌面 App…") { model.chooseApplication() }.disabled(model.demo || model.busy || model.updates.sessionInProgress)
             }
             Section("认证目录") {
                 Text(model.demo ? "演示目录" : model.home.path).font(.caption.monospaced()).textSelection(.enabled)
-                Button("选择目录…") { model.chooseHome() }.disabled(model.demo)
+                Button("选择目录…") { model.chooseHome() }.disabled(model.demo || model.busy || model.updates.sessionInProgress)
                 Text("应与桌面 App 的 CODEX_HOME 一致。支持文件认证；其他认证存储方式和共享守护进程仍不支持。")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section("关于") {
-                HStack(spacing: 12) { BrandMark(size: 38); VStack(alignment: .leading, spacing: 4) { Text("Codex Accounts").font(.headline); Text("0.2.1 · macOS 原生 · MIT License").font(.caption).foregroundStyle(.secondary) } }
+                HStack(spacing: 12) { BrandMark(size: 38); VStack(alignment: .leading, spacing: 4) { Text("Codex Accounts").font(.headline); Text("\(AppUpdates.version) · macOS 原生 · MIT License").font(.caption).foregroundStyle(.secondary) } }
+                Link("开发与维护：\(AppUpdates.author)", destination: AppUpdates.profileURL)
+                Link("项目主页 · 源码与反馈", destination: AppUpdates.projectURL)
                 Link("灵感来源：codex-account-switcher", destination: URL(string: "https://github.com/cjg1995/codex-account-switcher")!)
+                Link("自动刷新设计参考：OpenUsage", destination: URL(string: "https://github.com/robinebers/openusage")!)
+                Link("应用更新组件：Sparkle", destination: URL(string: "https://sparkle-project.org")!)
                 Text("独立开发，与 OpenAI 及原项目作者无隶属或背书关系。凭据保存在本机钥匙串，登录和额度查询连接 OpenAI。")
                     .font(.caption).foregroundStyle(.secondary)
             }
-        }.formStyle(.grouped).padding(10).disabled(model.busy)
+        }.formStyle(.grouped).padding(10).disabled(model.busy && !model.refreshingAutomatically)
     }
 }

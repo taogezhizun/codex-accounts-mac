@@ -11,6 +11,9 @@ import AppKit
         }
         .defaultSize(width: 960, height: 680)
         .commands {
+            CommandGroup(after: .appInfo) {
+                CheckForAppUpdates(updates: model.updates).environmentObject(model)
+            }
             CommandGroup(replacing: .newItem) {
                 Button("浏览器添加账号…") { model.addViaLogin() }.keyboardShortcut("n").disabled(model.busy || model.demo)
             }

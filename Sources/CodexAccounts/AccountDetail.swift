@@ -155,6 +155,7 @@ struct StatusFooter: View {
                 else { Image(systemName: model.demo ? "play.rectangle" : "checkmark.shield").foregroundStyle(.secondary) }
                 VStack(alignment: .leading, spacing: 5) {
                     Text(model.status).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    if !model.demo { RefreshStatusView() }
                     if let code = model.loginCode { Text("验证码：\(code)").font(.system(.body, design: .monospaced).weight(.semibold)).textSelection(.enabled) }
                 }
                 Spacer(minLength: 0)

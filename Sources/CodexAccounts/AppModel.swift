@@ -10,6 +10,21 @@ import AccountsCore
     @Published var appearance = "system" {
         didSet { if !demo { UserDefaults.standard.set(appearance, forKey: "appearance") } }
     }
+    @Published var automaticRefresh = true {
+        didSet {
+            if !demo {
+                UserDefaults.standard.set(automaticRefresh, forKey: "automaticRefresh")
+                if !automaticRefresh && refreshingAutomatically { cancel() }
+                updateNextRefresh()
+            }
+        }
+    }
+    @Published private(set) var nextRefresh: Date?
+    @Published private(set) var refreshingAutomatically = false
+    let updates: AppUpdates
+    private var refreshSchedule = RefreshSchedule()
+    private var refreshTimer: Timer?
+    private var wakeObserver: NSObjectProtocol?
     @Published var accounts: [Account] = []
     @Published var selection: String?
     @Published var currentIdentity: String?
@@ -28,6 +43,7 @@ import AccountsCore
 
     init(demo: Bool = false) {
         self.demo = demo
+        updates = AppUpdates(enabled: !demo)
         let defaultHome = FileManager.default.homeDirectoryForCurrentUser.resolvingSymlinksInPath().appendingPathComponent(".codex")
         home = demo ? URL(fileURLWithPath: "/demo/.codex") : UserDefaults.standard.string(forKey: "codexHome").map { URL(fileURLWithPath: $0) } ?? defaultHome
         application = demo ? nil : UserDefaults.standard.string(forKey: "desktopApplication").map { URL(fileURLWithPath: $0) } ?? Desktop.discover()
@@ -38,6 +54,7 @@ import AccountsCore
             if (CommandLine.arguments.contains("--demo-dark") || PreviewConfiguration.variant == "dark") { appearance = "dark" }
             return
         }
+        automaticRefresh = UserDefaults.standard.object(forKey: "automaticRefresh") as? Bool ?? true
         hideEmails = UserDefaults.standard.object(forKey: "hideEmails") as? Bool ?? true
         appearance = UserDefaults.standard.string(forKey: "appearance") ?? "system"
         do {
@@ -53,6 +70,34 @@ import AccountsCore
             refreshFileIdentity()
             status = awaitingConfirmation ? "上次切换尚待核对。请检查桌面 App 的账号，或恢复上次认证。" : (accounts.isEmpty ? "从添加一个账号开始。" : "选择账号，随时切换。")
         } catch { self.error = "本地账号库无法打开。\(safeMessage(error))" }
+        updates.isOperationBusy = { [weak self] in self?.busy ?? false }
+        updates.onSessionEnd = { [weak self] in self?.automaticRefreshTick() }
+        // One timer per model, shared by all windows and the menu bar.
+        refreshTimer = Timer.scheduledTimer(withTimeInterval: 15, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in self?.automaticRefreshTick() }
+        }
+        wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [weak self] _ in
+            Task { @MainActor [weak self] in self?.automaticRefreshTick() }
+        }
+        Task { @MainActor [weak self] in
+            self?.updates.start()
+            self?.automaticRefreshTick()
+        }
+    }
+    deinit {
+        refreshTimer?.invalidate()
+        if let wakeObserver { NSWorkspace.shared.notificationCenter.removeObserver(wakeObserver) }
+    }
+    private func updateNextRefresh() {
+        nextRefresh = automaticRefresh ? refreshSchedule.next.values.min() : nil
+    }
+    func automaticRefreshTick(now: Date = Date()) {
+        guard !demo else { return }
+        refreshSchedule.reconcile(accounts.map(\.id), now: now)
+        updateNextRefresh()
+        guard let id = refreshSchedule.due(now: now, enabled: automaticRefresh,
+                                          blocked: busy || !configured || awaitingConfirmation || updates.sessionInProgress) else { return }
+        refresh(id, automatic: true)
     }
 
     var selected: Account? { accounts.first { $0.id == selection } }
@@ -63,6 +108,7 @@ import AccountsCore
     func title(_ account: Account) -> String { AccountPresentation.title(account, hideEmails: hideEmails) }
     func switchBlockReason(_ id: String) -> String? {
         if busy { return "请等待当前操作完成" }
+        if updates.sessionInProgress { return "请先完成或关闭应用更新窗口" }
         if awaitingConfirmation { return "请先核对或恢复上次切换" }
         if id == currentIdentity { return "已是当前认证，无需再次切换" }
         if !demo && !configured { return "请先在设置中选择桌面 App" }
@@ -139,13 +185,26 @@ import AccountsCore
         operation?.cancel()
         if let session { Task { await session.rpc.close() } }
     }
-    func refresh(_ id: String) {
-        run("正在读取额度…") {
+    func refresh(_ id: String, automatic: Bool = false) {
+        guard !busy, !demo, !updates.sessionInProgress else { return }
+        refreshingAutomatically = automatic
+        run(automatic ? "正在自动刷新额度…" : "正在读取额度…", quietly: automatic) {
+            var succeeded = false
+            defer {
+                self.refreshSchedule.completed(id, succeeded: succeeded, now: Date())
+                self.refreshingAutomatically = false; self.updateNextRefresh()
+            }
             guard let store = self.store else { return }
-            let snapshot = try AuthSnapshot(store.snapshot(id))
             let desktop = try self.desktop()
             let helper = try self.makeSession(); self.session = helper
             do {
+                var snapshot = try AuthSnapshot(store.snapshot(id))
+                // Use a newer desktop access token only when it belongs to this exact saved identity.
+                // Do not write live auth or refresh tokens from a second process.
+                if let data = try? desktop.readLive(), let live = try? AuthSnapshot(data), live.identity == id {
+                    snapshot = live
+                }
+                try Task.checkCancellation()
                 try await helper.rpc.start(executable: desktop.executable, home: helper.home)
                 // External-token mode does not rotate the stored refresh token in a second process.
                 _ = try await helper.rpc.request("account/login/start", ["type": "chatgptAuthTokens", "accessToken": snapshot.accessToken, "chatgptAccountId": snapshot.accountID, "chatgptPlanType": snapshot.plan])
@@ -156,10 +215,12 @@ import AccountsCore
                     store.accounts[i].quotas = quotas; store.accounts[i].updatedAt = Date(); store.accounts[i].issue = nil
                     try store.save(); self.sync()
                 }
+                succeeded = true
                 self.status = "额度已更新。"
                 await helper.close(); self.session = nil
             } catch {
                 await helper.close(); self.session = nil
+                if Task.isCancelled { throw CancellationError() }
                 if let i = store.accounts.firstIndex(where: { $0.id == id }) {
                     store.accounts[i].issue = "刷新失败，显示的是上次结果。凭据过期时请重新登录或导入当前账号。"
                     try? store.save(); self.sync()
@@ -211,6 +272,7 @@ import AccountsCore
     private func importData(_ data: Data) throws {
         guard let store else { throw AccountsError.message("本地账号库未就绪。") }
         let account = try store.upsert(data); sync(); selection = account.id
+        refreshSchedule.request(account.id, now: Date())
     }
     private func desktop() throws -> Desktop {
         guard let application, let store else { throw AccountsError.message("请先在设置中选择 Codex 桌面 App。") }
@@ -226,17 +288,24 @@ import AccountsCore
     private func refreshFileIdentity() {
         currentIdentity = (try? PrivateFiles.read(home.appendingPathComponent("auth.json"))).flatMap { try? AuthSnapshot($0).identity }
     }
-    private func run(_ message: String, body: @escaping () async throws -> Void) {
-        guard !busy, !demo else { return }
-        busy = true; error = nil; status = message
+    private func run(_ message: String, quietly: Bool = false, body: @escaping () async throws -> Void) {
+        guard !busy, !demo, !updates.sessionInProgress else { return }
+        busy = true
+        if !quietly { error = nil }
+        status = message
         operation = Task {
             do { try await body() }
             catch is CancellationError { status = "已取消。" }
-            catch { self.error = safeMessage(error); status = "操作未完成。" }
+            catch {
+                if !quietly { self.error = safeMessage(error) }
+                status = quietly ? "自动刷新未完成，保留上次额度并稍后重试。" : "操作未完成。"
+            }
             loginCode = nil; busy = false
             let backup = try? store?.backup()
             hasBackup = backup != nil
             awaitingConfirmation = backup?.isPending ?? false
+            // Yield before scheduling the next account, avoiding overlapping helpers.
+            Task { @MainActor [weak self] in self?.automaticRefreshTick() }
         }
     }
     private func safeMessage(_ error: Error) -> String {

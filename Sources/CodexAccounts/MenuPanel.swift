@@ -68,6 +68,7 @@ struct MenuPanel: View {
                         if model.busy && model.canCancel { Button("取消") { model.cancel() } }
                     }.padding(.horizontal, 18).padding(.vertical, 10)
                 }
+                if !model.demo { RefreshStatusView().padding(.horizontal, 18).padding(.bottom, 10) }
                 Divider()
                 HStack {
                     Button { openWindow(id: "accounts"); NSApp.activate(ignoringOtherApps: true) } label: { Label("管理账号", systemImage: "sidebar.left") }

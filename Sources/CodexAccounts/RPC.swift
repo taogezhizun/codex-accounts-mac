@@ -34,7 +34,7 @@ import Darwin
             Task { @MainActor [weak self] in self?.failAll("Codex 辅助进程已退出。请重新尝试。") }
         }
         try process.run()
-        _ = try await request("initialize", ["clientInfo": ["name": "codex_accounts_mac", "version": "0.2.1"], "capabilities": ["experimentalApi": true]])
+        _ = try await request("initialize", ["clientInfo": ["name": "codex_accounts_mac", "version": "0.3.0"], "capabilities": ["experimentalApi": true]])
         try send(["method": "initialized"])
     }
 

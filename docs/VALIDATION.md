@@ -29,3 +29,9 @@ Checked synthetic light, dark, empty-account and pending-confirmation windows on
 Regression coverage checks official display names, missing/opaque labels, all-window preservation, old cache decoding without refresh, dotted bucket IDs, the legacy response, and the minimum remaining Codex window used in summaries. Demo quota fixtures are synthetic and do not reproduce account usage screenshots. Real account login and switching acceptance remains unchanged.
 
 Verified the default collapsed state, recognized display names, unknown group expansion and raw-ID information popover using the isolated quota demo. All 35 local tests passed, including the opt-in signed-out CLI test. No live account was accessed for UI verification.
+
+## 0.3.0 updates and automatic refresh
+
+43 local tests passed, including the signed-out real-CLI smoke test. New tests cover five-minute cadence, per-account backoff, wakeups, disabled/busy guards, new/removed accounts, manual cadence reset, demo inactivity, and release verification flags/public-key format. The settings UI was inspected with a separate demo bundle; no live account was loaded.
+
+The standalone Sparkle integration fixture uses disposable apps and a temporary test signing key. A valid signed update replaced version 1 with version 2 and relaunched successfully. A modified archive was rejected before installation (4005); a modified signed feed was rejected (1000). Both rejection tests retained version 1. The fixture never opens the real utility or Codex desktop and never reads the production signing key. Real account periodic refresh and real-account upgrade continuity still require user acceptance.

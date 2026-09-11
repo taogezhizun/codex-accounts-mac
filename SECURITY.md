@@ -2,7 +2,7 @@
 
 ## Data boundary
 
-This project is intended for a person's own authorized ChatGPT accounts. Credentials are never sent to a project-operated server. Login and quota actions communicate with OpenAI through the locally installed official Codex executable. There is no analytics backend, credential export feature, automatic warmup, account selling or shared-account service.
+This project is intended for a person's own authorized ChatGPT accounts. Credentials are never sent to a project-operated server. Update checks and package downloads connect to the public GitHub project, with Sparkle system profiling disabled. No account credentials are attached to update requests. Login and quota actions communicate with OpenAI through the locally installed official Codex executable. There is no analytics backend, credential export feature, automatic warmup, account selling or shared-account service.
 
 Runtime data is outside the source repository:
 
@@ -33,3 +33,9 @@ If the app crashes, reopen it to access the recovery journal. If the Keychain is
 All committed accounts, email addresses and quota values must be synthetic. Use `example.com` addresses. Do not commit screenshots of real account lists, authentication files, Keychain exports, local configuration, logs or debug dumps. `scripts/privacy-check.py` scans candidate tracked files; review images manually, since a text scanner cannot inspect their content. The build script removes debug information and rejects embedded user-home paths in the distributed executable.
 
 Do not paste access tokens, refresh tokens or credential JSON into GitHub issues. Report a suspected vulnerability with a minimal synthetic reproduction and affected version. No real credential is needed to reproduce file handling or transaction-ordering bugs.
+
+## Signed updates
+
+Sparkle 2.9.6 verifies Ed25519 signatures on both the feed and archive, with validation before extraction. Only the public verification key is shipped in Info.plist. The publishing key remains in the maintainer’s macOS login Keychain under the dedicated Sparkle account `org.codexaccounts.updates`; publishing scripts do not export it or store it in CI. Public keys are safe to publish and cannot be used to sign new updates. Loss of the private key requires a carefully planned migration or manual installation for existing ad-hoc-signed users; do not casually rotate the embedded key.
+
+These checks authenticate the project’s update channel; they do not provide Apple Developer ID signing or notarization. Installation remains user-confirmed. Keep the GitHub account and signing Mac secure. Upstream third-party copyright notices are preserved exactly; their public author information is distinct from private user information.

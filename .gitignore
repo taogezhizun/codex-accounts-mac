@@ -11,3 +11,6 @@ auth.json
 *.zip
 *.dmg
 *.app/
+
+__pycache__/
+*.pyc
