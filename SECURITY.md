@@ -28,7 +28,7 @@ After shutdown it re-reads the departing credentials, archives that fresh snapsh
 
 A failed launch restores the prior file only while the file still equals the expected old or new bytes. Recovery rejects a different directory or unrelated account. The last recovery snapshot remains after confirmation. A pending journal blocks another switch until the user acknowledges or recovers the operation.
 
-After a crash or relaunch, recovery starts unchecked and is read only when explicitly requested through switching, restoration or recovery inspection. This does not block quota queries using the current login file. Once a failed or pending credential operation is detected, the recovery guard pauses further switching and quota refresh until resolved. If the Keychain is inaccessible, the app stops credential changes; it does not fall back to a plaintext account store. Removing an account from the list does not delete the recovery journal or log the desktop out.
+After a crash or relaunch, recovery starts unchecked and is read only when explicitly requested through switching, restoration or recovery inspection. This does not block quota queries using the current login file. A pending journal, failed recovery read or failed switch/restore transaction activates the recovery guard, pausing further switching and quota refresh until resolved. If the Keychain is inaccessible, the app stops credential changes; it does not fall back to a plaintext account store. Removing an account from the list does not delete the recovery journal or log the desktop out.
 
 ## Repository hygiene
 
