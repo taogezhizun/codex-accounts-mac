@@ -1,10 +1,12 @@
-# Updates and refresh — 0.3.0
+# Updates and refresh — 0.3.1
 
 ## User behavior
 
 About credits the public maintainer account and links to the GitHub profile and project. No private name, email, account screenshot or developer-machine path is included.
 
-Quota refresh runs on launch, then at five-minute per-account intervals. New accounts become due promptly, wakeups only refresh overdue accounts, and opening more windows does not create another timer. Failures retain cached values and back off through 10, 20, 40 and 60 minutes. A successful or manual refresh resets that account’s cadence. Automatic work is serialized with login and switching, pauses during pending desktop confirmation and Sparkle sessions, and can be disabled in Settings. The existing external-token protocol avoids rotating refresh tokens from two processes. Expired inactive accounts can still require sign-in.
+Quota refresh runs only for the saved account matching the current Codex file login. It runs on launch and at five-minute intervals; wakeups refresh only if due. Other accounts keep their last cached values and cannot be refreshed manually until switched to and confirmed. The live identity is re-read on each tick and at asynchronous refresh boundaries, preventing an external login change from applying results to another account. Signed-out and unsaved logins produce no background requests. Failures back off through 10, 20, 40 and 60 minutes. Refresh remains paused during login, switching, pending confirmation and Sparkle updates.
+
+Quota credentials come exclusively from the live auth file; there is no Keychain fallback or post-refresh backup read. Startup recovery inspection forbids authentication UI. If access is unavailable, the app shows an explicit check-recovery action and preserves the pending/unknown guard instead of treating the journal as absent. Only deliberate user actions may request Keychain authorization. Saved accounts and recovery backups remain in the local Keychain.
 
 This cadence and cache feedback were inspired by [OpenUsage’s refreshing documentation](https://github.com/robinebers/openusage/blob/main/docs/refreshing.md); the implementation is independent.
 
@@ -40,8 +42,8 @@ dist/packaging-venv/bin/pip install -r scripts/dmg-requirements.txt
 After building a release, package and verify each architecture (replace the version when preparing a new release):
 
 ```sh
-ARCH=arm64 OUTPUT_DIR="$PWD/dist/v0.3.0/arm64" scripts/build-dmg.sh
-python3 scripts/verify-dmg.py dist/v0.3.0/arm64/Codex-Accounts-macOS-arm64.dmg dist/v0.3.0/arm64/Codex-Accounts-macOS-arm64.zip
+ARCH=arm64 OUTPUT_DIR="$PWD/dist/v0.3.1/arm64" scripts/build-dmg.sh
+python3 scripts/verify-dmg.py dist/v0.3.1/arm64/Codex-Accounts-macOS-arm64.dmg dist/v0.3.1/arm64/Codex-Accounts-macOS-arm64.zip
 ```
 
 Repeat with `x86_64`. Open the DMG normally in Finder to inspect the icon layout, arrow and installation text. The verifier mounts read-only, checks the app signature, compares every app file and symlink with the ZIP, and scans for private home paths. It never launches the packaged app.

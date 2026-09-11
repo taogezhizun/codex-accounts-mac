@@ -13,7 +13,7 @@ The release script verifies its ad-hoc signature and scans executable strings fo
 Use two of your own accounts and pause work in every client sharing the credential directory.
 
 1. Save the currently logged-in account A; add B through the OpenAI browser flow. Confirm the desktop still shows A.
-2. Explicitly refresh B's quota. Confirm displayed values are plausible and stale/unknown states are labeled correctly.
+2. Verify B shows cached/unknown quota and its refresh control is disabled. Refresh A and verify only its timestamp changes.
 3. Switch A → B. Confirm the desktop closes normally, reopens, and its account screen shows B. Only then confirm success in the utility.
 4. Use recovery. Confirm the desktop returns to A. Then test a normal B → A switch.
 5. Verify preferences and existing local tasks remain usable; restart the utility during a pending confirmation and confirm recovery is still available.
@@ -41,3 +41,9 @@ The arm64 and x86_64 release archives and appcast feeds were signed with the pro
 ## 0.3.0 DMG packaging and README
 
 Both architecture-specific DMGs passed disk-image checksum verification, deep app code-signature verification, and a file-by-file plus symlink comparison against the already published signed ZIPs. The Applications link targets the standard system folder. Installer contents were scanned for local home paths; no additional runtime data was included. The Apple Silicon DMG was opened normally in Finder to verify the icon arrangement, Chinese instructions and Retina background rendering. The README screenshot uses a separate demo bundle with synthetic accounts only. This packaging change does not alter the app or extend the real-account validation claims above.
+
+## 0.3.1 current-account refresh
+
+50 local tests passed, including the isolated signed-out real-CLI smoke test. New regressions cover current-only scheduling, external account changes, logout and unsaved identities, reuse of the latest matching token, rejection of another user in the same workspace, and noninteractive Keychain queries retaining authorization failures as errors. Quota refresh has no vault-read fallback and skips post-operation recovery reads. A startup recovery read that cannot authorize blocks switching until the user explicitly checks the record. Saved credentials and backups are not migrated. Real-account periodic refresh and upgrade continuity still require local user acceptance.
+
+The inactive-account cache notice and recovery-authorization banner were visually inspected in isolated demo bundles. Both arm64 and x86_64 DMGs match their signed ZIP contents and pass deep code-signature verification. Production update feeds and ZIPs were signed and verified locally without exporting the private key. No real account or live Codex desktop was used for these checks.

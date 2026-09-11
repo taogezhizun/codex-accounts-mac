@@ -75,9 +75,10 @@ struct RefreshStatusView: View {
             let text: String = {
                 if model.demo { return "演示模式不连接账号" }
                 if !model.automaticRefresh { return "自动刷新已暂停" }
-                if model.refreshingAutomatically { return "正在自动刷新 · 可取消" }
+                if model.refreshingAutomatically { return "正在刷新当前账号 · 可取消" }
+                if model.recoveryNeedsUnlock { return "检查恢复记录后继续自动刷新" }
                 if model.awaitingConfirmation { return "核对切换结果后继续自动刷新" }
-                guard let date = model.nextRefresh else { return "添加账号后自动刷新" }
+                guard let date = model.nextRefresh else { return "保存当前登录账号后自动刷新" }
                 let seconds = Int(date.timeIntervalSince(context.date))
                 return seconds <= 0 ? "空闲后自动刷新" : "下次自动刷新约 \(max(1, (seconds + 59) / 60)) 分钟后"
             }()

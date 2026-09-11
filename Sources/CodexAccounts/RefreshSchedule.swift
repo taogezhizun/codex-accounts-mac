@@ -1,6 +1,6 @@
 import Foundation
 
-/// Per-account cadence; UI openings never bypass it. A restart refreshes cached data once.
+/// Cadence for the saved account matching the live login. Other accounts retain their cache.
 struct RefreshSchedule {
     static let interval: TimeInterval = 300
     private(set) var next: [String: Date] = [:]
@@ -11,6 +11,10 @@ struct RefreshSchedule {
         next = next.filter { active.contains($0.key) }
         failures = failures.filter { active.contains($0.key) }
         for id in ids where next[id] == nil { next[id] = now }
+    }
+    mutating func reconcileCurrent(_ currentID: String?, savedIDs: [String], now: Date) {
+        let ids = currentID.map { savedIDs.contains($0) ? [$0] : [] } ?? []
+        reconcile(ids, now: now)
     }
     func due(now: Date, enabled: Bool, blocked: Bool) -> String? {
         guard enabled, !blocked else { return nil }

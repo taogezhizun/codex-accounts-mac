@@ -40,22 +40,24 @@ struct AccountDetail: View {
                             Text(AccountPresentation.updatedLabel(account, now: context.date)).font(.caption).foregroundStyle(.secondary)
                         }
                         Button { model.refresh(account.id) } label: { Image(systemName: "arrow.clockwise") }
-                            .buttonStyle(.borderless).help("刷新额度（⌘R）").accessibilityLabel("刷新额度").keyboardShortcut("r").disabled(model.busy || model.demo)
+                            .buttonStyle(.borderless).help("刷新额度（⌘R）").accessibilityLabel("刷新额度").keyboardShortcut("r").disabled(model.busy || model.demo || !isCurrent || model.awaitingConfirmation)
                     }
                     if account.quotas.isEmpty {
                         VStack(spacing: 12) {
                             Image(systemName: "chart.bar.xaxis").font(.title2).foregroundStyle(.tertiary)
-                            Text("读取一次，了解可用额度").font(.callout.weight(.medium))
+                            Text(isCurrent ? "读取一次，了解可用额度" : "切换到此账号后读取额度").font(.callout.weight(.medium))
                             Text("不会发送聊天消息或触发额度重置。").font(.caption).foregroundStyle(.secondary)
-                            Button("读取额度") { model.refresh(account.id) }.disabled(model.busy || model.demo)
+                            Button("读取额度") { model.refresh(account.id) }.disabled(model.busy || model.demo || !isCurrent || model.awaitingConfirmation)
                         }.frame(maxWidth: .infinity).padding(28).background(.background, in: RoundedRectangle(cornerRadius: 14)).overlay(RoundedRectangle(cornerRadius: 14).stroke(.quaternary))
                     } else {
                         QuotaGroupsView(windows: account.quotas)
                     }
-                    if let issue = account.issue {
+                    if !isCurrent {
+                        Label("未处于当前登录状态，仅显示上次额度；切换并核对后更新。", systemImage: "clock").font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    } else if let issue = account.issue {
                         Label(issue, systemImage: "exclamationmark.arrow.triangle.2.circlepath").font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                     } else if !account.quotas.isEmpty && AccountPresentation.needsRefresh(account) {
-                        Label("这是上次记录的额度，切换前可以刷新确认。", systemImage: "clock.arrow.circlepath").font(.caption).foregroundStyle(.secondary)
+                        Label("这是上次记录的额度，可以刷新确认。", systemImage: "clock.arrow.circlepath").font(.caption).foregroundStyle(.secondary)
                     }
                 }
                 VStack(alignment: .leading, spacing: 15) {
@@ -117,12 +119,16 @@ struct RecoveryBanner: View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: "person.crop.circle.badge.checkmark").font(.title3).foregroundStyle(.orange).padding(.top, 1)
             VStack(alignment: .leading, spacing: 7) {
-                Text("还差一步：核对桌面账号").font(.callout.weight(.semibold))
-                Text("本地认证已更新。请检查桌面 App 显示的账号，再确认切换结果。")
+                Text(model.recoveryNeedsUnlock ? "恢复记录需要授权读取" : "还差一步：核对桌面账号").font(.callout.weight(.semibold))
+                Text(model.recoveryNeedsUnlock ? "点击检查后才会请求钥匙串授权。确认恢复状态前，暂不切换或自动刷新。" : "本地认证已更新。请检查桌面 App 显示的账号，再确认切换结果。")
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 HStack(spacing: 14) {
-                    Button("已核对，账号正确") { model.confirmDesktopAccount() }.disabled(model.busy || model.demo)
-                    Button("恢复上次认证…", action: restore).buttonStyle(.borderless).disabled(model.busy || model.demo || !model.hasBackup)
+                    if model.recoveryNeedsUnlock {
+                        Button("检查恢复记录…") { model.unlockRecoveryRecord() }.disabled(model.busy || model.demo)
+                    } else {
+                        Button("已核对，账号正确") { model.confirmDesktopAccount() }.disabled(model.busy || model.demo)
+                        Button("恢复上次认证…", action: restore).buttonStyle(.borderless).disabled(model.busy || model.demo || !model.hasBackup)
+                    }
                 }.padding(.top, 2)
             }
             Spacer(minLength: 0)

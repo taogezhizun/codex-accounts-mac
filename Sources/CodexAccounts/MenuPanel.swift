@@ -27,9 +27,12 @@ struct MenuPanel: View {
                 if let error = model.error { ErrorBanner(message: error) { model.error = nil }.padding([.horizontal, .bottom], 14) }
                 if model.awaitingConfirmation {
                     VStack(alignment: .leading, spacing: 9) {
-                        Label("请先核对上次切换", systemImage: "clock.badge.checkmark").font(.callout.weight(.medium))
-                        Text("检查桌面 App 的账号，确认后才能继续切换。").font(.caption).foregroundStyle(.secondary)
-                        HStack { Button("已核对") { model.confirmDesktopAccount() }; Button("恢复…") { recovering = true } }.disabled(model.busy || model.demo)
+                        Label(model.recoveryNeedsUnlock ? "恢复记录需要授权" : "请先核对上次切换", systemImage: "clock.badge.checkmark").font(.callout.weight(.medium))
+                        Text(model.recoveryNeedsUnlock ? "点击检查后再请求钥匙串授权。" : "检查桌面 App 的账号，确认后才能继续切换。").font(.caption).foregroundStyle(.secondary)
+                        HStack {
+                            if model.recoveryNeedsUnlock { Button("检查恢复记录…") { model.unlockRecoveryRecord() } }
+                            else { Button("已核对") { model.confirmDesktopAccount() }; Button("恢复…") { recovering = true } }
+                        }.disabled(model.busy || model.demo)
                     }.padding(13).frame(maxWidth: .infinity, alignment: .leading).background(Color.orange.opacity(0.08), in: RoundedRectangle(cornerRadius: 10)).padding([.horizontal, .bottom], 14)
                 }
                 if !model.accounts.isEmpty {

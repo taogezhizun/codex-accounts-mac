@@ -96,9 +96,9 @@ struct SettingsView: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section("额度刷新") {
-                Toggle("自动刷新已保存账号的额度", isOn: $model.automaticRefresh).disabled(model.demo)
+                Toggle("自动刷新当前登录账号的额度", isOn: $model.automaticRefresh).disabled(model.demo)
                 RefreshStatusView()
-                Text("启动时刷新，此后每 5 分钟自动更新。失败保留上次结果，并延后重试；可随时手动刷新。切换或登录期间暂停自动刷新。")
+                Text("只读取 Codex 当前登录账号，每 5 分钟更新一次。其他账号保留上次额度，切换并核对后再更新。后台刷新不读取钥匙串；失败保留缓存并延后重试。")
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section("应用更新") {

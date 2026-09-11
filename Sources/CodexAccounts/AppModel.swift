@@ -32,6 +32,7 @@ import AccountsCore
     @Published var status = "从添加一个账号开始。"
     @Published var error: String?
     @Published var loginCode: String?
+    @Published private(set) var recoveryNeedsUnlock = false
     @Published var hasBackup = false
     @Published var awaitingConfirmation = false
     @Published var application: URL?
@@ -52,6 +53,7 @@ import AccountsCore
             if (CommandLine.arguments.contains("--demo-empty") || PreviewConfiguration.variant == "empty") { accounts = []; selection = nil; currentIdentity = nil }
             if (CommandLine.arguments.contains("--demo-pending") || PreviewConfiguration.variant == "pending") { awaitingConfirmation = true; hasBackup = true; currentIdentity = selection; status = "演示：桌面 App 已重开，请核对账号。" }
             if (CommandLine.arguments.contains("--demo-dark") || PreviewConfiguration.variant == "dark") { appearance = "dark" }
+            if PreviewConfiguration.variant == "recovery-lock" { recoveryNeedsUnlock = true; awaitingConfirmation = true; hasBackup = false }
             return
         }
         automaticRefresh = UserDefaults.standard.object(forKey: "automaticRefresh") as? Bool ?? true
@@ -64,11 +66,9 @@ import AccountsCore
             accounts = store!.accounts
             selection = accounts.first?.id
             // On relaunch, the encrypted journal survives even if the last process crashed.
-            let backup = try store!.backup()
-            hasBackup = backup != nil
-            awaitingConfirmation = backup?.isPending ?? false
+            loadRecoveryState(allowInteraction: false)
             refreshFileIdentity()
-            status = awaitingConfirmation ? "上次切换尚待核对。请检查桌面 App 的账号，或恢复上次认证。" : (accounts.isEmpty ? "从添加一个账号开始。" : "选择账号，随时切换。")
+            status = recoveryNeedsUnlock ? "请点击检查恢复记录，授权后继续使用。" : awaitingConfirmation ? "上次切换尚待核对。请检查桌面 App 的账号，或恢复上次认证。" : (accounts.isEmpty ? "从添加一个账号开始。" : "选择账号，随时切换。")
         } catch { self.error = "本地账号库无法打开。\(safeMessage(error))" }
         updates.isOperationBusy = { [weak self] in self?.busy ?? false }
         updates.onSessionEnd = { [weak self] in self?.automaticRefreshTick() }
@@ -89,11 +89,11 @@ import AccountsCore
         if let wakeObserver { NSWorkspace.shared.notificationCenter.removeObserver(wakeObserver) }
     }
     private func updateNextRefresh() {
-        nextRefresh = automaticRefresh ? refreshSchedule.next.values.min() : nil
+        nextRefresh = automaticRefresh ? currentIdentity.flatMap { refreshSchedule.next[$0] } : nil
     }
     func automaticRefreshTick(now: Date = Date()) {
-        guard !demo else { return }
-        refreshSchedule.reconcile(accounts.map(\.id), now: now)
+        guard !demo, !busy, !updates.sessionInProgress else { return }
+        refreshFileIdentity(now: now)
         updateNextRefresh()
         guard let id = refreshSchedule.due(now: now, enabled: automaticRefresh,
                                           blocked: busy || !configured || awaitingConfirmation || updates.sessionInProgress) else { return }
@@ -186,29 +186,33 @@ import AccountsCore
         if let session { Task { await session.rpc.close() } }
     }
     func refresh(_ id: String, automatic: Bool = false) {
-        guard !busy, !demo, !updates.sessionInProgress else { return }
+        guard !busy, !demo, !updates.sessionInProgress, !awaitingConfirmation else { return }
+        refreshFileIdentity()
+        guard id == currentIdentity, accounts.contains(where: { $0.id == id }) else {
+            if !automatic { error = "仅刷新当前登录账号；请先切换到此账号并核对登录。" }
+            return
+        }
         refreshingAutomatically = automatic
-        run(automatic ? "正在自动刷新额度…" : "正在读取额度…", quietly: automatic) {
+        run(automatic ? "正在自动刷新额度…" : "正在读取额度…", quietly: automatic, recheckRecovery: false) {
             var succeeded = false
             defer {
                 self.refreshSchedule.completed(id, succeeded: succeeded, now: Date())
                 self.refreshingAutomatically = false; self.updateNextRefresh()
             }
             guard let store = self.store else { return }
-            let desktop = try self.desktop()
+            let desktop = try self.desktop(); try desktop.preflight()
             let helper = try self.makeSession(); self.session = helper
             do {
-                var snapshot = try AuthSnapshot(store.snapshot(id))
-                // Use a newer desktop access token only when it belongs to this exact saved identity.
-                // Do not write live auth or refresh tokens from a second process.
-                if let data = try? desktop.readLive(), let live = try? AuthSnapshot(data), live.identity == id {
-                    snapshot = live
-                }
+                // Only the live file supplies quota credentials. No vault fallback, including manual refresh.
+                _ = try CurrentQuotaCredentials.load(id: id, readLive: desktop.readLive)
                 try Task.checkCancellation()
                 try await helper.rpc.start(executable: desktop.executable, home: helper.home)
+                // Recheck after launching the helper: another client may have changed the login.
+                let snapshot = try CurrentQuotaCredentials.load(id: id, readLive: desktop.readLive)
                 // External-token mode does not rotate the stored refresh token in a second process.
                 _ = try await helper.rpc.request("account/login/start", ["type": "chatgptAuthTokens", "accessToken": snapshot.accessToken, "chatgptAccountId": snapshot.accountID, "chatgptPlanType": snapshot.plan])
                 let result = try await helper.rpc.request("account/rateLimits/read")
+                _ = try CurrentQuotaCredentials.load(id: id, readLive: desktop.readLive)
                 let quotas = QuotaWindow.parse(result)
                 guard !quotas.isEmpty else { throw AccountsError.message("服务没有返回可识别的额度窗口，未将未知额度显示为 0。") }
                 if let i = store.accounts.firstIndex(where: { $0.id == id }) {
@@ -253,10 +257,11 @@ import AccountsCore
         }
     }
     func confirmDesktopAccount() {
-        guard !demo else { return }
+        guard !demo, !busy, !recoveryNeedsUnlock else { return }
         do {
             try store?.confirmBackup(); awaitingConfirmation = false
             status = "已记录你的核对结果。上一次认证备份仍可恢复。"
+            automaticRefreshTick()
         } catch { self.error = safeMessage(error) }
     }
     func rename(_ id: String, nickname: String) {
@@ -272,7 +277,7 @@ import AccountsCore
     private func importData(_ data: Data) throws {
         guard let store else { throw AccountsError.message("本地账号库未就绪。") }
         let account = try store.upsert(data); sync(); selection = account.id
-        refreshSchedule.request(account.id, now: Date())
+        if account.id == currentIdentity { refreshSchedule.request(account.id, now: Date()) }
     }
     private func desktop() throws -> Desktop {
         guard let application, let store else { throw AccountsError.message("请先在设置中选择 Codex 桌面 App。") }
@@ -285,10 +290,12 @@ import AccountsCore
         return try IsolatedSession(root: store.directory.appendingPathComponent("Sessions", isDirectory: true))
     }
     private func sync() { accounts = store?.accounts ?? [] }
-    private func refreshFileIdentity() {
+    private func refreshFileIdentity(now: Date = Date()) {
         currentIdentity = (try? PrivateFiles.read(home.appendingPathComponent("auth.json"))).flatMap { try? AuthSnapshot($0).identity }
+        refreshSchedule.reconcileCurrent(currentIdentity, savedIDs: accounts.map(\.id), now: now)
+        updateNextRefresh()
     }
-    private func run(_ message: String, quietly: Bool = false, body: @escaping () async throws -> Void) {
+    private func run(_ message: String, quietly: Bool = false, recheckRecovery: Bool = true, body: @escaping () async throws -> Void) {
         guard !busy, !demo, !updates.sessionInProgress else { return }
         busy = true
         if !quietly { error = nil }
@@ -301,11 +308,32 @@ import AccountsCore
                 status = quietly ? "自动刷新未完成，保留上次额度并稍后重试。" : "操作未完成。"
             }
             loginCode = nil; busy = false
-            let backup = try? store?.backup()
+            if recheckRecovery { loadRecoveryState(allowInteraction: false) }
+            // Re-evaluate the live account after the operation, avoiding overlapping helpers.
+            Task { @MainActor [weak self] in self?.automaticRefreshTick() }
+        }
+    }
+    private func loadRecoveryState(allowInteraction: Bool) {
+        do {
+            let backup = try store?.backup(allowInteraction: allowInteraction)
             hasBackup = backup != nil
             awaitingConfirmation = backup?.isPending ?? false
-            // Yield before scheduling the next account, avoiding overlapping helpers.
-            Task { @MainActor [weak self] in self?.automaticRefreshTick() }
+            recoveryNeedsUnlock = false
+        } catch {
+            // Unknown is not "no pending switch". Keep switching blocked without prompting in the background.
+            recoveryNeedsUnlock = true
+            awaitingConfirmation = true
+            hasBackup = false
+            if allowInteraction { self.error = safeMessage(error) }
+        }
+    }
+    func unlockRecoveryRecord() {
+        guard !demo, !busy, !updates.sessionInProgress else { return }
+        error = nil
+        loadRecoveryState(allowInteraction: true)
+        if !recoveryNeedsUnlock {
+            status = awaitingConfirmation ? "恢复记录已读取，请核对上次切换。" : "恢复记录已检查，可以继续使用。"
+            automaticRefreshTick()
         }
     }
     private func safeMessage(_ error: Error) -> String {

@@ -4,12 +4,17 @@ import AccountsCore
 
 final class KeychainVault {
     private let service = "org.codexaccounts.local-vault.v1"
-    func read(_ key: String) throws -> Data? {
+    private let copyMatching: (CFDictionary, UnsafeMutablePointer<CFTypeRef?>) -> OSStatus
+    init(copyMatching: @escaping (CFDictionary, UnsafeMutablePointer<CFTypeRef?>) -> OSStatus = { SecItemCopyMatching($0, $1) }) {
+        self.copyMatching = copyMatching
+    }
+    func read(_ key: String, allowInteraction: Bool = true) throws -> Data? {
         var query = base(key)
         query[kSecReturnData as String] = true
         query[kSecMatchLimit as String] = kSecMatchLimitOne
+        if !allowInteraction { query[kSecUseAuthenticationUI as String] = kSecUseAuthenticationUIFail }
         var value: CFTypeRef?
-        let status = SecItemCopyMatching(query as CFDictionary, &value)
+        let status = copyMatching(query as CFDictionary, &value)
         if status == errSecItemNotFound { return nil }
         guard status == errSecSuccess, let data = value as? Data else { throw failure(status) }
         return data
@@ -87,8 +92,8 @@ final class AccountStore {
         accounts.removeAll { $0.id == id }; try save(); try vault.remove(id)
     }
     func saveBackup(_ value: SwitchBackup) throws { try vault.write(JSONEncoder().encode(value), key: "switch-recovery") }
-    func backup() throws -> SwitchBackup? {
-        guard let data = try vault.read("switch-recovery") else { return nil }
+    func backup(allowInteraction: Bool = true) throws -> SwitchBackup? {
+        guard let data = try vault.read("switch-recovery", allowInteraction: allowInteraction) else { return nil }
         return try JSONDecoder().decode(SwitchBackup.self, from: data)
     }
     func confirmBackup() throws {
