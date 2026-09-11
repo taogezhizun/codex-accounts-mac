@@ -25,3 +25,25 @@ Ad-hoc app signing supports self-use without a paid Apple developer account. EdD
 5. Check both public feed URLs and asset downloads. Run `python3 scripts/test-updater.py` for disposable-app tests of signed installation and rejection of modified archives/feeds when changing the updater. It uses a disposable test key and has no access to account credentials or the production signing key.
 
 CI builds and tests without a publishing key. Release signing is local. Forks should change the maintainer links and feed URLs and generate their own signing key before distributing updates; never pretend to use the original publisher’s signing identity.
+
+## DMG installers
+
+Manual downloads use a DMG with a Chinese installation guide and an Applications shortcut. Sparkle continues to use the signed ZIP archives above. Both formats contain the identical app. DMG packaging does not re-sign the app or provide Apple notarization.
+
+Set up the isolated packaging environment once (Python 3.10+):
+
+```sh
+python3 -m venv dist/packaging-venv
+dist/packaging-venv/bin/pip install -r scripts/dmg-requirements.txt
+```
+
+After building a release, package and verify each architecture (replace the version when preparing a new release):
+
+```sh
+ARCH=arm64 OUTPUT_DIR="$PWD/dist/v0.3.0/arm64" scripts/build-dmg.sh
+python3 scripts/verify-dmg.py dist/v0.3.0/arm64/Codex-Accounts-macOS-arm64.dmg dist/v0.3.0/arm64/Codex-Accounts-macOS-arm64.zip
+```
+
+Repeat with `x86_64`. Open the DMG normally in Finder to inspect the icon layout, arrow and installation text. The verifier mounts read-only, checks the app signature, compares every app file and symlink with the ZIP, and scans for private home paths. It never launches the packaged app.
+
+Upload both DMGs alongside the ZIP assets. An additional installer format may be added to an existing release when it contains the exact previously published app; never replace an existing published asset. Keep the filenames `Codex-Accounts-macOS-arm64.dmg` and `Codex-Accounts-macOS-x86_64.dmg` stable for README's latest-release links. [dmgbuild](https://dmgbuild.readthedocs.io/) is a build-only dependency; its libraries are not bundled in the app.

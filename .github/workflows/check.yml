@@ -13,3 +13,9 @@ jobs:
         run: swift test
       - name: Build native app
         run: ./scripts/build-app.sh
+      - name: Build and verify DMG installer
+        run: |
+          python3 -m venv dist/packaging-venv
+          dist/packaging-venv/bin/pip install -r scripts/dmg-requirements.txt
+          ./scripts/build-dmg.sh
+          python3 scripts/verify-dmg.py "dist/Codex-Accounts-macOS-$(uname -m).dmg" "dist/Codex-Accounts-macOS-$(uname -m).zip"

@@ -33,3 +33,9 @@ See [validation](VALIDATION.md) for checked states and the remaining real-accoun
 ## 0.2.1 quota naming
 
 Use the optional `limitName` from the [official rate-limit response](https://learn.chatgpt.com/docs/app-server#6-rate-limits-chatgpt). Empty names, names identical to the raw ID, and machine-style underscore labels fall back to an unidentified group; do not guess a model from its code name. Show recognized Codex first, keep unknown pools in a collapsed disclosure, and expose IDs only in the information popover. Summaries use the tightest Codex window, never an unrelated full pool. Old cache IDs and period labels are projected without a destructive migration.
+
+## Download page and installer
+
+The README opens with a small app icon, one sentence describing its purpose, and architecture-specific DMG downloads. A native app screenshot replaces the icon sizing board; the screenshot is captured from an isolated demo bundle containing only synthetic accounts. Detailed compatibility and validation notes stay available below the installation steps and in the usage guide.
+
+The installer uses a quiet blue-gray background (#F6F7FB), dark headings (#20283D), secondary text (#657087), and a single blue directional arrow (#5572D8). System semibold type introduces installation; regular system type explains the drag action. The real app and Applications icons are Finder items, with fixed positions in a 640 by 400 window. Original AppKit artwork includes 1x and 2x representations. No account data or third-party artwork is used.
