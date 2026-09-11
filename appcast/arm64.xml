@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><!-- sparkle-sign-warning:
+IMPORTANT: This file was signed by Sparkle. Any modifications to this file requires re-signing this file with generate_appcast or sign_update! The signed signature will be embedded at the end of this file.
+--><rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+  <channel>
+    <title>Codex Accounts for macOS</title>
+    <link>https://github.com/taogezhizun/codex-accounts-mac</link>
+    <description>Signed updates maintained by taogezhizun.</description>
+    <item>
+      <title>Codex Accounts 0.3.0</title>
+      <pubDate>Fri, 11 Sep 2026 03:15:30 +0000</pubDate>
+      <sparkle:version>4</sparkle:version>
+      <sparkle:shortVersionString>0.3.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <link>https://github.com/taogezhizun/codex-accounts-mac/releases/tag/v0.3.0</link>
+      <enclosure url="https://github.com/taogezhizun/codex-accounts-mac/releases/download/v0.3.0/Codex-Accounts-macOS-arm64.zip" sparkle:edSignature="npiN9tQWztTeFEzcQ9h7pegZ1FlD0zPxIlGYX4UekYy99TIXtoMmS1+vCp0bOFl6zBO3wy3PZDJxy7ObpmmkCg==" length="2588963" type="application/octet-stream"></enclosure>
+    </item>
+  </channel>
+</rss><!-- sparkle-signatures:
+edSignature: VLdlTLWiGVLsZIlyVo1KjrSu7GiCnB/tcnbSTquc6ysjZMzU7he14JvSdPpFX5yp3e0Vfs5g8ZTKREEAy/CQAQ==
+length: 1291
+-->
