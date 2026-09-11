@@ -7,13 +7,17 @@ A small native utility using Sparkle for signed in-place app updates. SwiftUI su
 - `AccountsCore`: snapshot identity, quota parsing, private file I/O, storage guards and switch/recovery transaction ordering.
 - `CodexAccounts`: Keychain storage, app-server transport, isolated sessions, desktop lifecycle and SwiftUI presentation.
 - `AccountsCoreTests`: synthetic credentials, file permissions and injected lifecycle failures.
-- `CodexAccountsTests`: UI presentation rules and an opt-in real-CLI smoke test in a fresh empty home.
+- `CodexAccountsTests`: UI presentation, current-account refresh scheduling, recovery lifecycle with an injected Keychain query spy, and an opt-in real-CLI smoke test in a fresh empty home.
 
 The account fingerprint combines the workspace/account ID with the subject from the ID token, so token rotation does not change identity and different users sharing a workspace do not collide. These local claims are labels, not verified login evidence.
 
-Quota reads use `rateLimitsByLimitId` when present, with the legacy `rateLimits` fallback. Each named bucket and its actual window duration remain visible. Missing windows remain unknown. A failed refresh retains the previous timestamp and marks the cache stale.
+Only the saved account matching the current Codex file login is refreshed. Credentials come from that live file, with identity checks at asynchronous boundaries and no Keychain fallback. Inactive accounts retain their cached quotas. Quota reads use `rateLimitsByLimitId` when present, with the legacy `rateLimits` fallback. Each named bucket and its actual window duration remain visible. Missing windows remain unknown. A failed refresh retains the previous timestamp and marks the cache stale.
 
 A login helper receives a newly allocated private home and a small allowlist of process environment variables. API keys, auth-issuer overrides and unrelated provider settings are not inherited. Browser destinations must use HTTPS on the OpenAI auth host. RPC errors are deliberately summarized; raw stderr and server diagnostic bodies are not displayed or logged.
+
+## Recovery lifecycle
+
+Startup loads local metadata and the current file identity without probing the Keychain. Recovery begins unchecked; current-file quota queries can proceed. A user-confirmed switch reads the durable journal before target credentials or desktop shutdown, stopping on a pending, denied or malformed record. Restore also loads the journal on demand. Before entering a switch/restore transaction, the model conservatively invalidates its recovery state; success marks it pending confirmation, while failure leaves it guarded. Ordinary operation completion never re-reads the journal. Saved snapshots and the journal remain in the Keychain.
 
 ## Compatibility
 
@@ -29,4 +33,4 @@ The original Windows project was reviewed during feasibility assessment. The imp
 
 `Presentation.swift` contains masking, ordering, quota freshness and original icon geometry. The main window, account details, menu panel and dialogs live in separate view files. Both switching entry points share the same target confirmation component and eligibility checks. UI preferences use local UserDefaults; demo mode does not persist them or initialize the credential store. See [UI design](UI-DESIGN.md).
 
-`RefreshSchedule` controls per-account automatic refresh, serialized through the existing operation guard. `AppUpdates` wraps Sparkle; update sessions and account operations cannot start concurrently. Downloaded archives and feeds require EdDSA signatures. See [update design](UPDATES.md).
+`RefreshSchedule` schedules only the current saved account and retains its retry cadence, serialized through the existing operation guard. `AppUpdates` wraps Sparkle; update sessions and account operations cannot start concurrently. Downloaded archives and feeds require EdDSA signatures. See [update design](UPDATES.md).

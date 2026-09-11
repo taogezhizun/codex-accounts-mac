@@ -44,6 +44,8 @@ Both architecture-specific DMGs passed disk-image checksum verification, deep ap
 
 ## 0.3.1 current-account refresh
 
+Historical validation only: the startup authorization assumption below proved insufficient and was superseded by the 0.3.2 regression fix described in the next section.
+
 50 local tests passed, including the isolated signed-out real-CLI smoke test. New regressions cover current-only scheduling, external account changes, logout and unsaved identities, reuse of the latest matching token, rejection of another user in the same workspace, and noninteractive Keychain queries retaining authorization failures as errors. Quota refresh has no vault-read fallback and skips post-operation recovery reads. A startup recovery read that cannot authorize blocks switching until the user explicitly checks the record. Saved credentials and backups are not migrated. Real-account periodic refresh and upgrade continuity still require local user acceptance.
 
 The inactive-account cache notice and recovery-authorization banner were visually inspected in isolated demo bundles. Both arm64 and x86_64 DMGs match their signed ZIP contents and pass deep code-signature verification. Production update feeds and ZIPs were signed and verified locally without exporting the private key. No real account or live Codex desktop was used for these checks.

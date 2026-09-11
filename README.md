@@ -2,7 +2,7 @@
   <img src="docs/images/app-icon.png" width="88" height="88" alt="Codex Accounts 图标">
 </p>
 <h1 align="center">Codex Accounts</h1>
-<p align="center">在 Mac 上管理多个 Codex 账号，切换前先看清剩余额度。</p>
+<p align="center">在 Mac 上管理多个 Codex 账号，查看当前额度，快速切换。</p>
 <p align="center">
   <a href="https://github.com/taogezhizun/codex-accounts-mac/releases/latest/download/Codex-Accounts-macOS-arm64.dmg"><strong>下载 Apple Silicon 版 ↓</strong></a>
   &nbsp; · &nbsp;
@@ -16,9 +16,11 @@
 <p align="center"><sub>演示界面 · 账号与额度均为虚构</sub></p>
 
 - **切换账号** — 在主窗口或菜单栏选择账号，确认后重开 Codex 桌面 App。
-- **掌握额度** — 每 5 分钟刷新当前登录账号，其他账号保留上次额度。
-- **本机保存** — 凭据存入 macOS 钥匙串，支持切换前备份与恢复。
+- **掌握额度** — 每 5 分钟读取当前登录账号的额度，其他账号显示上次缓存。
+- **本机保存** — 已保存账号的凭据与恢复备份留在 macOS 钥匙串。
 - **应用内更新** — 从设置检查新版，确认后直接替换升级。
+
+**0.3.2 起，打开工具和刷新额度不访问钥匙串。** 额度查询读取 Codex 当前登录文件；主动保存、切换、恢复等账号操作才可能请求钥匙串授权。详见[钥匙串与授权](docs/USAGE.md#钥匙串与授权)。
 
 ## 安装
 
