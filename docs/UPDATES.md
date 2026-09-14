@@ -1,4 +1,4 @@
-# Updates and refresh — 0.4.1 (unreleased)
+# Updates and refresh — 0.4.1
 
 ## User behavior
 
