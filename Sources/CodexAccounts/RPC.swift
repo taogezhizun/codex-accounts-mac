@@ -12,6 +12,7 @@ import Darwin
     private var pending: [Int: CheckedContinuation<[String: Any], Error>] = [:]
     private var notifications: [[String: Any]] = []
     private var stopped = false
+    private(set) var requiresTokenRefresh = false
 
     func start(executable: URL, home: URL) async throws {
         process.executableURL = executable
@@ -34,7 +35,7 @@ import Darwin
             Task { @MainActor [weak self] in self?.failAll("Codex 辅助进程已退出。请重新尝试。") }
         }
         try process.run()
-        _ = try await request("initialize", ["clientInfo": ["name": "codex_accounts_mac", "version": "0.3.0"], "capabilities": ["experimentalApi": true]])
+        _ = try await request("initialize", ["clientInfo": ["name": "codex_accounts_mac", "version": Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "development"], "capabilities": ["experimentalApi": true]])
         try send(["method": "initialized"])
     }
 
@@ -97,7 +98,8 @@ import Darwin
         while let newline = buffer.firstIndex(of: 10) {
             let line = Data(buffer[..<newline]); buffer.removeSubrange(...newline)
             guard let object = (try? JSONSerialization.jsonObject(with: line)) as? [String: Any] else { continue }
-            if let id = object["id"] as? Int, object["method"] != nil {
+            if let id = object["id"], (id is String || id is NSNumber), object["method"] != nil {
+                if object["method"] as? String == "account/chatgptAuthTokens/refresh" { requiresTokenRefresh = true }
                 try? send(["id": id, "error": ["code": -32601, "message": "Unsupported server request"]])
             } else if let id = object["id"] as? Int, let continuation = pending.removeValue(forKey: id) {
                 if object["error"] != nil {

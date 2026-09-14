@@ -130,7 +130,7 @@ final class AccountStore {
         let snapshot = try AuthSnapshot(bytes)
         value.credentials[snapshot.identity] = bytes
         if let i = value.accounts.firstIndex(where: { $0.id == snapshot.identity }) {
-            value.accounts[i].email = snapshot.email; value.accounts[i].plan = snapshot.plan; value.accounts[i].issue = nil
+            value.accounts[i].email = snapshot.email; value.accounts[i].plan = snapshot.plan; value.accounts[i].issue = nil; value.accounts[i].quotaNeedsLogin = false; value.accounts[i].quotaRejectedFingerprint = nil
         } else { value.accounts.append(Account(snapshot: snapshot)) }
         try commit(value)
         return value.accounts.first { $0.id == snapshot.identity }!

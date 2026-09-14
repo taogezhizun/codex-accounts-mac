@@ -58,4 +58,19 @@ final class RefreshScheduleTests: XCTestCase {
         XCTAssertFalse(model.updates.sessionInProgress)
         XCTAssertFalse(model.updates.canCheck)
     }
+    func testBatchScheduleKeepsIndependentBackoffAndPersistentPause() {
+        var schedule = RefreshSchedule(); schedule.reconcile(["a", "b", "c"], now: start)
+        schedule.completed("a", succeeded: true, now: start)
+        schedule.completed("b", succeeded: false, now: start)
+        schedule.pause("c")
+        XCTAssertEqual(schedule.dueIDs(now: start.addingTimeInterval(300), enabled: true, blocked: false), ["a"])
+        XCTAssertEqual(schedule.dueIDs(now: start.addingTimeInterval(600), enabled: true, blocked: false), ["a", "b"])
+        schedule.reconcile(["a", "b", "c"], now: start.addingTimeInterval(900))
+        XCTAssertTrue(schedule.paused.contains("c"))
+        XCTAssertTrue(schedule.dueIDs(now: start.addingTimeInterval(900), enabled: true, blocked: true).isEmpty)
+        schedule.request("c", now: start.addingTimeInterval(900))
+        XCTAssertFalse(schedule.paused.contains("c"))
+        schedule.reconcile(["a"], now: start.addingTimeInterval(900))
+        XCTAssertEqual(Set(schedule.next.keys), ["a"])
+    }
 }

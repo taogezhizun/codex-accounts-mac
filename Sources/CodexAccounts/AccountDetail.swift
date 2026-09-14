@@ -40,21 +40,19 @@ struct AccountDetail: View {
                             Text(AccountPresentation.updatedLabel(account, now: context.date)).font(.caption).foregroundStyle(.secondary)
                         }
                         Button { model.refresh(account.id) } label: { Image(systemName: "arrow.clockwise") }
-                            .buttonStyle(.borderless).help("刷新额度（⌘R）").accessibilityLabel("刷新额度").keyboardShortcut("r").disabled(model.busy || model.demo || !isCurrent || model.awaitingConfirmation)
+                            .buttonStyle(.borderless).help("刷新额度（⌘R）").accessibilityLabel("刷新额度").keyboardShortcut("r").disabled(!model.canRefresh(account.id))
                     }
                     if account.quotas.isEmpty {
                         VStack(spacing: 12) {
                             Image(systemName: "chart.bar.xaxis").font(.title2).foregroundStyle(.tertiary)
-                            Text(isCurrent ? "读取一次，了解可用额度" : "切换到此账号后读取额度").font(.callout.weight(.medium))
+                            Text("读取一次，了解可用额度").font(.callout.weight(.medium))
                             Text("不会发送聊天消息或触发额度重置。").font(.caption).foregroundStyle(.secondary)
-                            Button("读取额度") { model.refresh(account.id) }.disabled(model.busy || model.demo || !isCurrent || model.awaitingConfirmation)
+                            Button("读取额度") { model.refresh(account.id) }.disabled(!model.canRefresh(account.id))
                         }.frame(maxWidth: .infinity).padding(28).background(.background, in: RoundedRectangle(cornerRadius: 14)).overlay(RoundedRectangle(cornerRadius: 14).stroke(.quaternary))
                     } else {
                         QuotaGroupsView(windows: account.quotas)
                     }
-                    if !isCurrent {
-                        Label("未处于当前登录状态，仅显示上次额度；切换并核对后更新。", systemImage: "clock").font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                    } else if let issue = account.issue {
+                    if let issue = account.issue {
                         Label(issue, systemImage: "exclamationmark.arrow.triangle.2.circlepath").font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                     } else if !account.quotas.isEmpty && AccountPresentation.needsRefresh(account) {
                         Label("这是上次记录的额度，可以刷新确认。", systemImage: "clock.arrow.circlepath").font(.caption).foregroundStyle(.secondary)

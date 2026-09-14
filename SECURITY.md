@@ -20,7 +20,11 @@ Legacy startup reads only metadata and offers an optional migration. Only clicki
 
 Old Keychain entries and metadata remain untouched after migration and are not synchronized with new changes. They are not a safe downgrade target. Do not run old and new versions against the same data directory. A corrupt or unsupported active store fails closed without falling back to the Keychain. Removing old records is a separate explicit operation, not part of this migration.
 
-Account JWT payloads are decoded only to label and distinguish snapshots. They are **not** treated as verified cryptographic identity. Only successful authentication in the desktop app confirms the intended runtime identity.
+Account JWT payloads are decoded to label and distinguish snapshots and to detect an already-expired access-token hint. They are **not** treated as verified cryptographic identity. Only successful authentication in the desktop app confirms the intended runtime identity.
+
+## Quota refresh
+
+Version 0.4.1 queries all saved accounts, with at most two isolated app-server children at a time. The current account uses its matching live credentials; inactive accounts use their saved file snapshot. Helpers receive access tokens only, not saved refresh tokens, and never overwrite the desktop auth file. The model revalidates identity and credential source before storing results. Expired credentials pause automatic queries until renewed by login/import or manually retried; this version does not automatically rotate refresh tokens. Legacy users who defer migration can query only the live account, without a Keychain fallback.
 
 ## Switching and recovery
 

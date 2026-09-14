@@ -40,6 +40,11 @@ public struct AuthSnapshot {
         plan = details?["chatgpt_plan_type"] as? String ?? "未知套餐"
     }
 
+    public var accessTokenExpiresAt: Date? {
+        guard let expiry = Self.claims(accessToken)?["exp"] as? Double, expiry.isFinite else { return nil }
+        return Date(timeIntervalSince1970: expiry)
+    }
+
     static func claims(_ token: String) -> [String: Any]? {
         let pieces = token.split(separator: ".", omittingEmptySubsequences: false)
         guard pieces.count == 3 else { return nil }
@@ -97,6 +102,8 @@ public struct Account: Codable, Identifiable, Equatable {
     public var quotas: [QuotaWindow]
     public var updatedAt: Date?
     public var issue: String?
+    public var quotaNeedsLogin: Bool?
+    public var quotaRejectedFingerprint: String?
     public init(snapshot: AuthSnapshot) {
         id = snapshot.identity; nickname = ""; email = snapshot.email; plan = snapshot.plan; quotas = []
     }

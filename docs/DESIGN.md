@@ -7,11 +7,13 @@ A small native utility using Sparkle for signed in-place app updates. SwiftUI su
 - `AccountsCore`: snapshot identity, quota parsing, private file I/O, storage guards and switch/recovery transaction ordering.
 - `CodexAccounts`: atomic local-file storage and read-only legacy Keychain migration, app-server transport, isolated sessions, desktop lifecycle and SwiftUI presentation.
 - `AccountsCoreTests`: synthetic credentials, file permissions and injected lifecycle failures.
-- `CodexAccountsTests`: UI presentation, current-account refresh scheduling, recovery lifecycle with an injected Keychain query spy, and an opt-in real-CLI smoke test in a fresh empty home.
+- `CodexAccountsTests`: UI presentation, all-account refresh scheduling and bounded concurrency, recovery lifecycle with an injected Keychain query spy, and an opt-in real-CLI smoke test in a fresh empty home.
 
 The account fingerprint combines the workspace/account ID with the subject from the ID token, so token rotation does not change identity and different users sharing a workspace do not collide. These local claims are labels, not verified login evidence.
 
-Only the saved account matching the current Codex file login is refreshed. Credentials come from that live file, with identity checks at asynchronous boundaries and no Keychain fallback. Inactive accounts retain their cached quotas. Quota reads use `rateLimitsByLimitId` when present, with the legacy `rateLimits` fallback. Each named bucket and its actual window duration remain visible. Missing windows remain unknown. A failed refresh retains the previous timestamp and marks the cache stale.
+All saved accounts can refresh independently of the active desktop login. `QuotaCredentials` prefers matching live credentials and otherwise loads the saved file snapshot, with no Keychain fallback. Before applying an asynchronous result it verifies the same identity, source and exact credential bytes. `QuotaReader` uses one isolated external-token session per account, without refresh-token rotation or changes to the live auth file. An expired access-token hint or a server token-refresh request marks the account as needing login; the rejected credential fingerprint and paused state persist with the account. A new live credential or reimport enables recovery.
+
+Quota reads use `rateLimitsByLimitId` when present, with the legacy `rateLimits` fallback. Each named bucket and its actual window duration remain visible. Missing windows remain unknown. A failed refresh retains the previous timestamp and marks the cache stale.
 
 A login helper receives a newly allocated private home and a small allowlist of process environment variables. API keys, auth-issuer overrides and unrelated provider settings are not inherited. Browser destinations must use HTTPS on the OpenAI auth host. RPC errors are deliberately summarized; raw stderr and server diagnostic bodies are not displayed or logged.
 
@@ -39,4 +41,4 @@ The original Windows project was reviewed during feasibility assessment. The imp
 
 `StatusBarQuota` projects the current saved identity to its lowest Codex remaining percentage, with distinct pending/unknown and stale states. The menu-bar label observes model state without additional network or Keychain calls.
 
-`RefreshSchedule` schedules only the current saved account and retains its retry cadence, serialized through the existing operation guard. `AppUpdates` wraps Sparkle; active update dialogs/installations and account operations cannot start concurrently; a passive gentle reminder does not block account work. Downloaded archives and feeds require EdDSA signatures. See [update design](UPDATES.md).
+`RefreshSchedule` tracks each eligible account independently, excluding credentials awaiting login. `QuotaBatch` processes at most two accounts at once under one operation guard; each completion is committed separately on the main actor. Cancellation defers remaining work by five minutes. Legacy migration keeps eligibility limited to the matching live account. `AppUpdates` wraps Sparkle; active update dialogs/installations and account operations cannot start concurrently; a passive gentle reminder does not block account work. Downloaded archives and feeds require EdDSA signatures. See [update design](UPDATES.md).

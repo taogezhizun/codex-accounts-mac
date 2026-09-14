@@ -1,12 +1,14 @@
-# Updates and refresh — 0.4.0 (unreleased)
+# Updates and refresh — 0.4.1 (unreleased)
 
 ## User behavior
 
 About credits the public maintainer account and links to the GitHub profile and project. No private name, email, account screenshot or developer-machine path is included.
 
-Quota refresh runs only for the saved account matching the current Codex file login. It runs on launch and at five-minute intervals; wakeups refresh only if due. Other accounts keep their last cached values and cannot be refreshed manually until switched to and confirmed. The live identity is re-read on each tick and at asynchronous refresh boundaries, preventing an external login change from applying results to another account. Signed-out and unsaved logins produce no background requests. Failures back off through 10, 20, 40 and 60 minutes. Refresh remains paused during login, switching, pending confirmation and Sparkle updates.
+Quota refresh runs for all saved accounts on launch and every five minutes, with at most two isolated queries at once. Wakeups process only due accounts. Each account retains its own result, timestamp and retry schedule; one failure does not discard another result. Manual actions refresh the selected account or all accounts, including a retry of paused credentials. Cancellation stops queued work and preserves completed results without immediately restarting the batch. Failures back off through 10, 20, 40 and 60 minutes. Refresh remains paused during login, switching, pending confirmation and active Sparkle updates.
 
-Quota credentials come exclusively from the live auth file. In 0.4.0 saved accounts and recovery backups use a private, unencrypted local snapshot. Only explicit legacy migration queries the old Keychain; all subsequent credential operations use files. File-backed startup reads pending recovery and blocks new switches/refresh until resolved. Legacy users may defer migration and still refresh the current account. See [storage and migration](../SECURITY.md).
+The current account prefers the live Codex auth file; other accounts use their saved local credentials even when no desktop account is logged in. Results are accepted only if identity, source and credential bytes still match. Each isolated helper receives only an access token in external-token mode, never a saved refresh token. Known access-token expiry or an app-server token-refresh request pauses that account until re-login/reimport, manual retry, or a changed live credential. This is not automatic credential renewal. The paused state survives restart and old quota values remain visibly stale.
+
+Saved accounts and recovery backups use a private, unencrypted local snapshot. Only explicit legacy migration queries the old Keychain; all subsequent credential operations use files. File-backed startup reads pending recovery and blocks new switches/refresh until resolved. Legacy users may defer migration and still refresh only the current account from its live file. See [storage and migration](../SECURITY.md).
 
 The status bar displays the lowest remaining Codex window for the current saved account, with a tooltip identifying its duration and timestamp. Unknown/pending is “—”; stale cache uses “~”. It reuses the existing state and scheduler. A settings toggle hides the number.
 
@@ -54,8 +56,8 @@ dist/packaging-venv/bin/pip install -r scripts/dmg-requirements.txt
 After building a release, package and verify each architecture (replace the version when preparing a new release):
 
 ```sh
-ARCH=arm64 OUTPUT_DIR="$PWD/dist/v0.4.0/arm64" scripts/build-dmg.sh
-python3 scripts/verify-dmg.py dist/v0.4.0/arm64/Codex-Accounts-macOS-arm64.dmg dist/v0.4.0/arm64/Codex-Accounts-macOS-arm64.zip
+ARCH=arm64 OUTPUT_DIR="$PWD/dist/v0.4.1/arm64" scripts/build-dmg.sh
+python3 scripts/verify-dmg.py dist/v0.4.1/arm64/Codex-Accounts-macOS-arm64.dmg dist/v0.4.1/arm64/Codex-Accounts-macOS-arm64.zip
 ```
 
 Repeat with `x86_64`. Open the DMG normally in Finder to inspect the icon layout, arrow and installation text. The verifier mounts read-only, checks the app signature, compares every app file and symlink with the ZIP, and scans for private home paths. It never launches the packaged app.

@@ -79,6 +79,7 @@ struct MenuPanel: View {
                     Button { openWindow(id: "accounts"); NSApp.activate(ignoringOtherApps: true) } label: { Label("管理账号", systemImage: "sidebar.left") }
                     Spacer()
                     Menu {
+                        Button("刷新全部账号额度") { model.refreshAll() }.disabled(model.busy || model.demo || model.awaitingConfirmation)
                         Button("恢复上次认证…") { recovering = true }
                             .disabled((!model.hasBackup && !model.recoveryNeedsUnlock) || model.credentialActionsBlocked)
                         CheckForAppUpdates(updates: model.updates)
@@ -112,9 +113,12 @@ private struct QuickAccountRow: View {
 
                         } else { Text("· Codex 额度未读取").font(.system(size: 10)).foregroundStyle(.secondary) }
                     }
+                    if account.quotaNeedsLogin == true {
+                        Text("需要重新登录").font(.system(size: 10)).foregroundStyle(.orange)
+                    }
                     if let quota = QuotaPresentation.summary(account.quotas) { QuotaMeter(window: quota, height: 3) }
                     TimelineView(.periodic(from: .now, by: 60)) { context in
-                        Text("\(!current || AccountPresentation.needsRefresh(account, now: context.date) ? "上次记录 · " : "")\(AccountPresentation.updatedLabel(account, now: context.date))")
+                        Text("\(AccountPresentation.needsRefresh(account, now: context.date) ? "上次记录 · " : "")\(AccountPresentation.updatedLabel(account, now: context.date))")
                             .font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(1)
                     }
                 }

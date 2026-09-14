@@ -49,3 +49,7 @@ The menu-bar template icon gains a monospaced percentage (13-point semibold). Un
 The non-blocking migration banner opens a native explanation sheet. It states the unencrypted-file tradeoff, possible old Keychain prompts, deferred behavior and downgrade boundary before the user starts migration. Busy migration disables dismissal and account mutations; errors stay visible and can be retried.
 
 Menu layout and local-file storage ideas also reference [liuzhao1225/codex-account-switcher](https://github.com/liuzhao1225/codex-account-switcher). All implementation and artwork here remain independently authored. See the [source review](research/liuzhao1225-experience-review.md).
+
+## 0.4.1 all-account refresh
+
+Inactive accounts can now display freshly queried quota. Use cache wording only when data is stale or a query failed; show “需要重新登录” for expired credentials. Both More menus expose “刷新全部账号额度”; the account detail and context menu refresh the selected account. A batch shows its account count, cancellation and final success count. The status-bar percentage still represents only the active saved account.

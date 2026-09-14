@@ -2,7 +2,7 @@
   <img src="docs/images/app-icon.png" width="88" height="88" alt="Codex Accounts 图标">
 </p>
 <h1 align="center">Codex Accounts</h1>
-<p align="center">在 Mac 上管理多个 Codex 账号，查看当前额度，快速切换。</p>
+<p align="center">在 Mac 上管理多个 Codex 账号，查看各账号额度，快速切换。</p>
 <p align="center">
   <a href="https://github.com/taogezhizun/codex-accounts-mac/releases/latest/download/Codex-Accounts-macOS-arm64.dmg"><strong>下载 Apple Silicon 版 ↓</strong></a>
   &nbsp; · &nbsp;
@@ -16,11 +16,11 @@
 <p align="center"><sub>演示界面 · 账号与额度均为虚构</sub></p>
 
 - **切换账号** — 在主窗口或菜单栏选择账号，确认后重开 Codex 桌面 App。
-- **掌握额度** — 状态栏直接显示当前账号剩余百分比；每 5 分钟刷新，其他账号保留上次缓存。
+- **掌握额度** — 每 5 分钟刷新所有已保存账号，支持一键刷新全部；状态栏显示当前账号剩余百分比。
 - **本机保存** — 账号与恢复备份保存在本机私有文件；旧版账号可主动迁移。
 - **应用内更新** — 菜单内提示新版本，确认后原位升级。
 
-**0.4.0 开发版本：本地文件存储 + 状态栏额度。** 新安装和完成迁移后的账号操作不访问钥匙串；旧数据仅在你点击“开始迁移”时请求读取授权。文件保存完整登录凭据，未经过应用层加密。详见[本地存储与迁移](docs/USAGE.md#本地存储与迁移)。本页下载按钮仍指向最新正式发行版，0.4.0 尚未发布。
+**0.4.1 开发版本：全部账号额度刷新 + 本地文件存储 + 状态栏额度。** 新安装和完成迁移后的账号操作不访问钥匙串；旧数据仅在你点击“开始迁移”时请求读取授权。文件保存完整登录凭据，未经过应用层加密。详见[本地存储与迁移](docs/USAGE.md#本地存储与迁移)。本页下载按钮仍指向最新正式发行版，0.4.1 尚未发布。凭据失效的账号暂停自动刷新并提示重新登录，其他账号照常更新。
 
 ## 安装
 

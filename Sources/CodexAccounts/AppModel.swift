@@ -48,9 +48,15 @@ import AccountsCore
     private var store: AccountStore?
     private var operation: Task<Void, Never>?
     private var session: IsolatedSession?
+    private let quotaReaderFactory: @MainActor () -> any QuotaReading
+    private var quotaReaders: [String: any QuotaReading] = [:]
+    private var liveCredentialFingerprint: String?
+    @Published private(set) var refreshingAccountIDs: Set<String> = []
 
     init(demo: Bool = false, directory: URL? = nil, defaults: UserDefaults = .standard,
-         startServices: Bool = true, vault: KeychainVault = KeychainVault()) {
+         startServices: Bool = true, vault: KeychainVault = KeychainVault(),
+         quotaReaderFactory: @escaping @MainActor () -> any QuotaReading = { QuotaReader() }) {
+        self.quotaReaderFactory = quotaReaderFactory
         self.demo = demo
         self.defaults = defaults
         updates = AppUpdates(enabled: !demo)
@@ -103,7 +109,7 @@ import AccountsCore
         if let wakeObserver { NSWorkspace.shared.notificationCenter.removeObserver(wakeObserver) }
     }
     private func updateNextRefresh() {
-        nextRefresh = automaticRefresh ? currentIdentity.flatMap { refreshSchedule.next[$0] } : nil
+        nextRefresh = automaticRefresh ? refreshSchedule.next.filter { !refreshSchedule.paused.contains($0.key) }.values.min() : nil
     }
     func automaticRefreshTick(now: Date = Date()) {
         guard !demo else { return }
@@ -111,15 +117,19 @@ import AccountsCore
         guard !busy, !updates.sessionInProgress else { return }
         refreshFileIdentity(now: now)
         updateNextRefresh()
-        guard let id = refreshSchedule.due(now: now, enabled: automaticRefresh,
-                                          blocked: busy || !configured || awaitingConfirmation || updates.sessionInProgress) else { return }
-        refresh(id, automatic: true)
+        let ids = refreshSchedule.dueIDs(now: now, enabled: automaticRefresh,
+                                         blocked: busy || !configured || awaitingConfirmation || updates.sessionInProgress)
+        if !ids.isEmpty { refreshAccounts(ids, automatic: true) }
     }
 
     var selected: Account? { accounts.first { $0.id == selection } }
     var configured: Bool { application != nil && store != nil }
     var credentialActionsBlocked: Bool { needsMigration || busy || updates.sessionInProgress || demo }
-    var canCancel: Bool { session != nil }
+    var canCancel: Bool { session != nil || !refreshingAccountIDs.isEmpty }
+    func canRefresh(_ id: String) -> Bool {
+        !busy && !demo && !updates.sessionInProgress && !awaitingConfirmation &&
+        accounts.contains(where: { $0.id == id }) && (!needsMigration || id == currentIdentity)
+    }
     var currentAccount: Account? { accounts.first { $0.id == currentIdentity } }
     var preferredColorScheme: ColorScheme? { appearance == "dark" ? .dark : appearance == "light" ? .light : nil }
     func title(_ account: Account) -> String { AccountPresentation.title(account, hideEmails: hideEmails) }
@@ -207,53 +217,77 @@ import AccountsCore
     func cancel() {
         operation?.cancel()
         if let session { Task { await session.rpc.close() } }
+        quotaReaders.values.forEach { $0.cancel() }
     }
     func refresh(_ id: String, automatic: Bool = false) {
-        guard !busy, !demo, !updates.sessionInProgress, !awaitingConfirmation else { return }
+        guard canRefresh(id) else { return }
+        refreshAccounts([id], automatic: automatic)
+    }
+    func refreshAll() {
+        guard !busy, !demo, !updates.sessionInProgress else { return }
         refreshFileIdentity()
-        guard id == currentIdentity, accounts.contains(where: { $0.id == id }) else {
-            if !automatic { error = "仅刷新当前登录账号；请先切换到此账号并核对登录。" }
-            return
-        }
+        refreshAccounts(refreshSchedule.next.keys.sorted(), automatic: false)
+    }
+    private func refreshAccounts(_ ids: [String], automatic: Bool) {
+        guard !busy, !demo, !updates.sessionInProgress, !awaitingConfirmation, !ids.isEmpty else { return }
+        let eligible = Set(accounts.map(\.id))
+        let requested = ids.filter { eligible.contains($0) && (!needsMigration || $0 == currentIdentity) }
+        guard !requested.isEmpty else { return }
         refreshingAutomatically = automatic
-        run(automatic ? "正在自动刷新额度…" : "正在读取额度…", quietly: automatic) {
-            var succeeded = false
-            defer {
-                self.refreshSchedule.completed(id, succeeded: succeeded, now: Date())
-                self.refreshingAutomatically = false; self.updateNextRefresh()
+        refreshingAccountIDs = Set(requested)
+        run("正在刷新 \(requested.count) 个账号的额度…", quietly: automatic) {
+            var succeeded = 0
+            await QuotaBatch.run(requested) { id in
+                if await self.refreshOne(id) { succeeded += 1 }
             }
-            guard let store = self.store else { return }
+            if Task.isCancelled {
+                self.refreshSchedule.deferCancelled(requested, now: Date())
+                self.status = "已取消额度刷新，保留已完成的结果。"
+            } else {
+                self.status = "额度刷新完成：\(succeeded)/\(requested.count) 个成功。"
+            }
+            self.refreshingAccountIDs = []; self.refreshingAutomatically = false
+            self.checkCurrentIdentity(); self.updateNextRefresh()
+        }
+    }
+    private func refreshOne(_ id: String) async -> Bool {
+        guard !Task.isCancelled, let store else { return false }
+        let reader = quotaReaderFactory()
+        quotaReaders[id] = reader
+        var fingerprint: String?
+        defer { quotaReaders.removeValue(forKey: id); refreshingAccountIDs.remove(id) }
+        do {
             let desktop = try self.desktop(); try desktop.preflight()
-            let helper = try self.makeSession(); self.session = helper
-            do {
-                // Only the live file supplies quota credentials. No vault fallback, including manual refresh.
-                _ = try CurrentQuotaCredentials.load(id: id, readLive: desktop.readLive)
-                try Task.checkCancellation()
-                try await helper.rpc.start(executable: desktop.executable, home: helper.home)
-                // Recheck after launching the helper: another client may have changed the login.
-                let snapshot = try CurrentQuotaCredentials.load(id: id, readLive: desktop.readLive)
-                // External-token mode does not rotate the stored refresh token in a second process.
-                _ = try await helper.rpc.request("account/login/start", ["type": "chatgptAuthTokens", "accessToken": snapshot.accessToken, "chatgptAccountId": snapshot.accountID, "chatgptPlanType": snapshot.plan])
-                let result = try await helper.rpc.request("account/rateLimits/read")
-                _ = try CurrentQuotaCredentials.load(id: id, readLive: desktop.readLive)
-                let quotas = QuotaWindow.parse(result)
-                guard !quotas.isEmpty else { throw AccountsError.message("服务没有返回可识别的额度窗口，未将未知额度显示为 0。") }
-                if let i = store.accounts.firstIndex(where: { $0.id == id }) {
-                    store.accounts[i].quotas = quotas; store.accounts[i].updatedAt = Date(); store.accounts[i].issue = nil
-                    try store.save(); self.sync()
-                }
-                succeeded = true
-                self.status = "额度已更新。"
-                await helper.close(); self.session = nil
-            } catch {
-                await helper.close(); self.session = nil
-                if Task.isCancelled { throw CancellationError() }
-                if let i = store.accounts.firstIndex(where: { $0.id == id }) {
-                    store.accounts[i].issue = "刷新失败，显示的是上次结果。凭据过期时请重新登录或导入当前账号。"
-                    try? store.save(); self.sync()
-                }
-                throw error
+            let credentials = try QuotaCredentials.load(id: id, live: desktop.readLive()) { try store.snapshot(id) }
+            fingerprint = AuthSnapshot.digest(credentials.snapshot.data)
+            let windows = try await reader.read(credentials.snapshot, executable: desktop.executable,
+                                                root: store.directory.appendingPathComponent("Sessions", isDirectory: true))
+            try Task.checkCancellation()
+            try credentials.validate(id: id, live: desktop.readLive()) { try store.snapshot(id) }
+            guard !windows.isEmpty, let index = store.accounts.firstIndex(where: { $0.id == id }) else {
+                throw AccountsError.message("未返回可用额度，保留上次记录。")
             }
+            store.accounts[index].quotas = windows; store.accounts[index].updatedAt = Date()
+            store.accounts[index].issue = nil; store.accounts[index].quotaNeedsLogin = false; store.accounts[index].quotaRejectedFingerprint = nil
+            try store.save(); sync()
+            refreshSchedule.request(id, now: Date())
+            refreshSchedule.completed(id, succeeded: true, now: Date())
+            return true
+        } catch {
+            if Task.isCancelled || error is CancellationError { return false }
+            let needsLogin = error is QuotaReadError
+            if let index = store.accounts.firstIndex(where: { $0.id == id }) {
+                store.accounts[index].quotaNeedsLogin = needsLogin
+                store.accounts[index].quotaRejectedFingerprint = needsLogin ? fingerprint : nil
+                store.accounts[index].issue = needsLogin
+                    ? "登录凭据已过期或失效，自动刷新已暂停。请通过浏览器重新添加此账号；当前账号也可在 Codex 登录后保存。"
+                    : "刷新未完成，保留上次额度并稍后重试。可检查网络；持续失败时请重新登录此账号。"
+                do { try store.save() } catch { self.error = "无法保存额度状态，请检查本地文件权限。" }
+                sync()
+            }
+            if needsLogin { refreshSchedule.pause(id) }
+            else { refreshSchedule.completed(id, succeeded: false, now: Date()) }
+            return false
         }
     }
     func switchTo(_ id: String) {
@@ -324,7 +358,7 @@ import AccountsCore
     private func importData(_ data: Data) throws {
         guard let store else { throw AccountsError.message("本地账号库未就绪。") }
         let account = try store.upsert(data); sync(); selection = account.id
-        if account.id == currentIdentity { refreshSchedule.request(account.id, now: Date()) }
+        refreshSchedule.request(account.id, now: Date())
     }
     private func desktop() throws -> Desktop {
         guard let application, let store else { throw AccountsError.message("请先在设置中选择 Codex 桌面 App。") }
@@ -338,8 +372,21 @@ import AccountsCore
     }
     private func sync() { accounts = store?.accounts ?? [] }
     private func refreshFileIdentity(now: Date = Date()) {
-        currentIdentity = (try? PrivateFiles.read(home.appendingPathComponent("auth.json"))).flatMap { try? AuthSnapshot($0).identity }
-        refreshSchedule.reconcileCurrent(currentIdentity, savedIDs: accounts.map(\.id), now: now)
+        let live = try? PrivateFiles.read(home.appendingPathComponent("auth.json"))
+        currentIdentity = live.flatMap { try? AuthSnapshot($0).identity }
+        let eligible = needsMigration ? accounts.filter { $0.id == currentIdentity } : accounts
+        refreshSchedule.reconcile(eligible.map(\.id), now: now)
+        let fingerprint = live.map(AuthSnapshot.digest)
+        for account in eligible where account.quotaNeedsLogin == true {
+            if account.id == currentIdentity, let fingerprint, fingerprint != account.quotaRejectedFingerprint {
+                refreshSchedule.request(account.id, now: now)
+            } else { refreshSchedule.pause(account.id) }
+        }
+        if fingerprint != liveCredentialFingerprint, let id = currentIdentity,
+           eligible.contains(where: { $0.id == id && $0.quotaNeedsLogin != true }) {
+            refreshSchedule.request(id, now: now)
+        }
+        liveCredentialFingerprint = fingerprint
         updateNextRefresh()
     }
     private func run(_ message: String, quietly: Bool = false, body: @escaping () async throws -> Void) {
@@ -404,6 +451,10 @@ import AccountsCore
         accounts = [account("demo-one", "日常工作", "work@example.com", "pro", 84, 62), account("demo-two", "个人探索", "personal@example.com", "plus", 96, 89), account("demo-three", "备用账号", "backup@example.com", "plus", 18, 43)]
         accounts[2].issue = "上次刷新未完成，显示的是缓存额度。"
         accounts[2].updatedAt = Date().addingTimeInterval(-3600)
+        if PreviewConfiguration.variant == "all-quota" {
+            accounts[2].quotaNeedsLogin = true
+            accounts[2].issue = "登录凭据已过期或失效，自动刷新已暂停。请通过浏览器重新添加此账号；当前账号也可在 Codex 登录后保存。"
+        }
         if CommandLine.arguments.contains("--demo-quotas") || PreviewConfiguration.variant == "quotas" {
             accounts[1].quotas = QuotaWindow.parse(["rateLimitsByLimitId": [
                 "codex": ["limitName": "Codex", "secondary": ["usedPercent": 72.0, "windowDurationMins": 10080]],

@@ -20,7 +20,7 @@ struct AccountsView: View {
                             AccountSidebarRow(account: account).tag(account.id)
                                 .contextMenu {
                                     Button("切换至此账号…") { pendingSwitch = account }.disabled(model.switchBlockReason(account.id) != nil)
-                                    Button("刷新额度") { model.refresh(account.id) }.disabled(model.busy || model.demo || account.id != model.currentIdentity || model.awaitingConfirmation)
+                                    Button("刷新额度") { model.refresh(account.id) }.disabled(!model.canRefresh(account.id))
                                     Divider()
                                     Button("编辑备注…") { pendingRename = account }.disabled(model.busy || model.demo)
                                     Button("移除账号…", role: .destructive) { pendingDelete = account }.disabled(model.busy || model.demo)
@@ -77,6 +77,7 @@ struct AccountsView: View {
                     .keyboardShortcut("p", modifiers: [.command, .shift])
                 AddAccountMenu().disabled(model.credentialActionsBlocked)
                 Menu {
+                    Button("刷新全部账号额度") { model.refreshAll() }.disabled(model.busy || model.demo || model.awaitingConfirmation)
                     Button("打开桌面 App") { model.openDesktop() }.disabled(model.busy || model.demo)
                     Button("恢复上次认证…") { showRestore = true }.disabled((!model.hasBackup && !model.recoveryNeedsUnlock) || model.busy || model.demo)
                     Divider()
