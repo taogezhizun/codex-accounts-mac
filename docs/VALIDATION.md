@@ -81,3 +81,7 @@ Apple Silicon and Intel release apps and DMGs were built locally. Both installer
 A preview-only bundle with synthetic accounts was inspected: a non-current account shows freshly updated quota; the More menu includes refresh-all; settings explain all-account refresh; an expired account shows a re-login label and its old quota timestamp. Preview mutation controls remain disabled. The preview was closed after inspection. UI automation lost its window connection after closing Settings; process sampling showed an idle main run loop (0% CPU, about 136 MiB resident), and relaunching only the disposable preview restored inspection. No status-label redraw loop was observed.
 
 Real multi-account OpenAI quota responses, long-running expiry/re-login behavior, legacy data migration and Intel UI still require local acceptance. Access-token expiry pauses the affected account; this version intentionally does not automatically renew saved refresh tokens. The status-bar value remains the current account only.
+
+### 0.4.1 distribution checks
+
+The release archives and both appcast feeds were signed with the existing publishing identity. Independent Ed25519 verification using the public key shipped in 0.3.2 passed for both archives and both feeds; the key is unchanged. GitHub's SHA-256 digests and byte counts match all four local DMG/ZIP assets. The private key was not exported.
