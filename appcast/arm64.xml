@@ -2,20 +2,20 @@
 IMPORTANT: This file was signed by Sparkle. Any modifications to this file requires re-signing this file with generate_appcast or sign_update! The signed signature will be embedded at the end of this file.
 --><rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
   <channel>
-    <title>Codex Accounts for macOS</title>
+    <title>Codex Switcher for macOS</title>
     <link>https://github.com/taogezhizun/codex-accounts-mac</link>
     <description>Signed updates maintained by taogezhizun.</description>
     <item>
-      <title>Codex Accounts 0.4.1</title>
-      <pubDate>Mon, 14 Sep 2026 04:09:48 +0000</pubDate>
-      <sparkle:version>8</sparkle:version>
-      <sparkle:shortVersionString>0.4.1</sparkle:shortVersionString>
+      <title>Codex Switcher 0.4.2</title>
+      <pubDate>Mon, 14 Sep 2026 08:00:46 +0000</pubDate>
+      <sparkle:version>9</sparkle:version>
+      <sparkle:shortVersionString>0.4.2</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <link>https://github.com/taogezhizun/codex-accounts-mac/releases/tag/v0.4.1</link>
-      <enclosure url="https://github.com/taogezhizun/codex-accounts-mac/releases/download/v0.4.1/Codex-Accounts-macOS-arm64.zip" sparkle:edSignature="61tF+f1mALsVpcwMReYcd4GFEmdvNLDp+jMBlR0lj2B9XU0T/2Ydt5wEO9076Dk8oHgpyRkfLaMt+gy7OFLTCQ==" length="2668858" type="application/octet-stream"></enclosure>
+      <link>https://github.com/taogezhizun/codex-accounts-mac/releases/tag/v0.4.2</link>
+      <enclosure url="https://github.com/taogezhizun/codex-accounts-mac/releases/download/v0.4.2/Codex-Accounts-macOS-arm64.zip" sparkle:edSignature="CUYoyPG4T+7ZIlTyFRqnTkeTFo9PcmYHukhxR+zoDOV3cvM9b7FHt/4QsJJSsIIPltQQL73kTF/DXroa/SEOBw==" length="2668860" type="application/octet-stream"></enclosure>
     </item>
   </channel>
 </rss><!-- sparkle-signatures:
-edSignature: 4ufKBWSjhtdaR4st0E8g+egtnY/S4Ct8zn8u3pk23eurPTem6+aT51+kOcmbWRRqm476nrlirY9hXVRPVmCICg==
+edSignature: +DRh6McQMOHMw3aR3ZCrwsDKl3VM34M7xWTOEhJc57gxzocnYH8v6/mQLAZ9mEvtjULNjfKREianH2WYoIR5Cw==
 length: 1291
 -->
