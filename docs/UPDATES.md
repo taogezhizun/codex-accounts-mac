@@ -1,4 +1,8 @@
-# Updates and refresh — 0.4.1
+# Updates and refresh — 0.4.2
+
+## Branding compatibility
+
+Version 0.4.2 uses **Codex Switcher** as its display name in the app, installer title and release feed. The repository URL, bundle identifier, executable/target names, preferences domain, account directory, Keychain migration identifiers, public signing key, feed URLs and `Codex Accounts.app` archive root are unchanged. Stable `Codex-Accounts-macOS-*` asset names preserve existing download links. Keeping the archive root follows [Sparkle publishing guidance](https://sparkle-project.org/documentation/publishing/) and avoids requiring existing users to install a second app. The on-disk bundle filename can still show the old name.
 
 ## User behavior
 
@@ -56,8 +60,8 @@ dist/packaging-venv/bin/pip install -r scripts/dmg-requirements.txt
 After building a release, package and verify each architecture (replace the version when preparing a new release):
 
 ```sh
-ARCH=arm64 OUTPUT_DIR="$PWD/dist/v0.4.1/arm64" scripts/build-dmg.sh
-python3 scripts/verify-dmg.py dist/v0.4.1/arm64/Codex-Accounts-macOS-arm64.dmg dist/v0.4.1/arm64/Codex-Accounts-macOS-arm64.zip
+ARCH=arm64 OUTPUT_DIR="$PWD/dist/v0.4.2/arm64" scripts/build-dmg.sh
+python3 scripts/verify-dmg.py dist/v0.4.2/arm64/Codex-Accounts-macOS-arm64.dmg dist/v0.4.2/arm64/Codex-Accounts-macOS-arm64.zip
 ```
 
 Repeat with `x86_64`. Open the DMG normally in Finder to inspect the icon layout, arrow and installation text. The verifier mounts read-only, checks the app signature, compares every app file and symlink with the ZIP, and scans for private home paths. It never launches the packaged app.

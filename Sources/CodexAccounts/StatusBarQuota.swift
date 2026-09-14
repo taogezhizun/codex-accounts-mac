@@ -31,6 +31,6 @@ struct StatusBarLabel: View {
         }
         .help(quota.help)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Codex Accounts，\(quota.help)")
+        .accessibilityLabel("Codex Switcher，\(quota.help)")
     }
 }

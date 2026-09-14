@@ -1,8 +1,9 @@
 <p align="center">
-  <img src="docs/images/app-icon.png" width="88" height="88" alt="Codex Accounts 图标">
+  <img src="docs/images/app-icon.png" width="88" height="88" alt="Codex Switcher 图标">
 </p>
-<h1 align="center">Codex Accounts</h1>
-<p align="center">在 Mac 上管理多个 Codex 账号，查看各账号额度，快速切换。</p>
+<h1 align="center">Codex Switcher</h1>
+<p align="center">简体中文 · <a href="README.en.md">English</a></p>
+<p align="center">切换 Codex 账号，随时查看额度。</p>
 <p align="center">
   <a href="https://github.com/taogezhizun/codex-accounts-mac/releases/latest/download/Codex-Accounts-macOS-arm64.dmg"><strong>下载 Apple Silicon 版 ↓</strong></a>
   &nbsp; · &nbsp;
@@ -11,24 +12,24 @@
 <p align="center"><sub>macOS 14+ &nbsp; / &nbsp; 原生 SwiftUI &nbsp; / &nbsp; 免费开源</sub></p>
 
 <p align="center">
-  <img src="docs/images/app-preview.png" width="960" alt="Codex Accounts 演示界面：左侧选择账号，右侧查看 5 小时与 7 天剩余额度，并确认切换。所有账号和额度均为虚构。">
+  <img src="docs/images/app-overview.svg" width="960" alt="Codex Switcher 界面示意：快速切换账号并查看剩余额度，所有数据均为虚构。">
 </p>
-<p align="center"><sub>演示界面 · 账号与额度均为虚构</sub></p>
+<p align="center"><sub>界面示意 · 账号与额度均为虚构</sub></p>
 
 - **切换账号** — 在主窗口或菜单栏选择账号，确认后重开 Codex 桌面 App。
 - **掌握额度** — 每 5 分钟刷新所有已保存账号，支持一键刷新全部；状态栏显示当前账号剩余百分比。
 - **本机保存** — 账号与恢复备份保存在本机私有文件；旧版账号可主动迁移。
 - **应用内更新** — 菜单内提示新版本，确认后原位升级。
 
-**当前版本 0.4.1：全部账号额度刷新 + 本地文件存储 + 状态栏额度。** 新安装和完成迁移后的账号操作不访问钥匙串；旧数据仅在你点击“开始迁移”时请求读取授权。文件保存完整登录凭据，未经过应用层加密。详见[本地存储与迁移](docs/USAGE.md#本地存储与迁移)。凭据失效的账号暂停自动刷新并提示重新登录，其他账号照常更新。
+**当前版本 0.4.2：Codex Accounts 现已更名为 Codex Switcher。** 已有账号和设置继续保留，通过 App 内更新即可升级。新安装和完成迁移后的账号操作不访问钥匙串；旧数据仅在你点击“开始迁移”时请求读取授权。文件保存完整登录凭据，未经过应用层加密。详见[本地存储与迁移](docs/USAGE.md#本地存储与迁移)。凭据失效的账号暂停自动刷新并提示重新登录，其他账号照常更新。
 
 ## 安装
 
 1. 下载适合你的 Mac 的 **DMG**：M 系列芯片选择 Apple Silicon，Intel 芯片选择 Intel。
-2. 打开 DMG，将 **Codex Accounts** 拖到右侧 **Applications** 文件夹。
+2. 打开 DMG，将应用图标拖到右侧 **Applications** 文件夹。
 3. 从「应用程序」启动工具，再推出磁盘映像。
 
-已有旧版？先退出旧工具，再拖入并替换同名 App。0.3.0 起可在「设置 → 应用更新」安装后续版本。
+已有旧版？推荐使用「设置 → 应用更新」原位升级。为兼容已有安装，App 包和下载文件保留 `Codex Accounts` / `Codex-Accounts` 旧文件名；界面显示为 Codex Switcher，不需要另装一份。手动安装时先退出旧工具，再拖入并替换同名 App。
 
 当前使用 ad-hoc 签名，未经过 Apple 公证；首次打开可能出现系统安全提示。详见[安装与兼容性说明](docs/USAGE.md)。[所有版本与 ZIP 下载](https://github.com/taogezhizun/codex-accounts-mac/releases)。
 

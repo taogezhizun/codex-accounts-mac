@@ -22,7 +22,7 @@ for scale in [1, 2] {
             .font: NSFont.systemFont(ofSize: size, weight: weight), .foregroundColor: color(ink)
         ])
     }
-    text("安装 Codex Accounts", x: 52, top: 38, size: 24, weight: .semibold, ink: 0x20283D)
+    text("安装 Codex Switcher", x: 52, top: 38, size: 24, weight: .semibold, ink: 0x20283D)
     text("将 App 拖入 Applications 文件夹", x: 52, top: 77, size: 14, weight: .regular, ink: 0x657087)
     let arrow = NSBezierPath()
     arrow.move(to: NSPoint(x: 294, y: 195)); arrow.line(to: NSPoint(x: 346, y: 195))

@@ -124,7 +124,7 @@ struct SettingsView: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
             Section("关于") {
-                HStack(spacing: 12) { BrandMark(size: 38); VStack(alignment: .leading, spacing: 4) { Text("Codex Accounts").font(.headline); Text("\(AppUpdates.version) · macOS 原生 · MIT License").font(.caption).foregroundStyle(.secondary) } }
+                HStack(spacing: 12) { BrandMark(size: 38); VStack(alignment: .leading, spacing: 4) { Text("Codex Switcher").font(.headline); Text("\(AppUpdates.version) · macOS 原生 · MIT License").font(.caption).foregroundStyle(.secondary) } }
                 Link("开发与维护：\(AppUpdates.author)", destination: AppUpdates.profileURL)
                 Link("项目主页 · 源码与反馈", destination: AppUpdates.projectURL)
                 Link("灵感来源：codex-account-switcher", destination: URL(string: "https://github.com/cjg1995/codex-account-switcher")!)

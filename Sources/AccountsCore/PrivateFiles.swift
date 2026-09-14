@@ -73,7 +73,7 @@ public final class ExclusiveLock {
         guard fd >= 0 else { throw AccountsError.message("无法创建操作锁。") }
         guard flock(fd, LOCK_EX | LOCK_NB) == 0 else {
             close(fd); fd = -1
-            throw AccountsError.message("另一个 Codex Accounts 正在运行。")
+            throw AccountsError.message("另一个 Codex Switcher 正在运行。")
         }
     }
     deinit { if fd >= 0 { flock(fd, LOCK_UN); close(fd) } }

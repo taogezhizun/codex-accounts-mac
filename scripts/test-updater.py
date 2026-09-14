@@ -45,7 +45,8 @@ def main():
                 (app / 'Contents/Frameworks').mkdir()
                 shutil.copy2(binary, app / 'Contents/MacOS/Probe')
                 run('/usr/bin/ditto', FRAMEWORKS / 'Sparkle.framework', app / 'Contents/Frameworks/Sparkle.framework')
-                info = dict(CFBundleExecutable='Probe', CFBundleName='Update Probe', CFBundleIdentifier=app_id,
+                info = dict(CFBundleExecutable='Probe', CFBundleName='Codex Accounts' if version == '1' else 'Codex Switcher', CFBundleIdentifier=app_id,
+                            CFBundleDisplayName='Codex Accounts' if version == '1' else 'Codex Switcher',
                             CFBundlePackageType='APPL', CFBundleVersion=version, CFBundleShortVersionString=version+'.0',
                             LSMinimumSystemVersion='14.0', SUFeedURL=base+'feed.xml', SUPublicEDKey=key,
                             SUVerifyUpdateBeforeExtraction=True, SURequireSignedFeed=True, SUEnableAutomaticChecks=False,
@@ -77,7 +78,8 @@ def main():
                     time.sleep(0.5)
                 result = marker.read_text() if marker.exists() else 'timeout'
                 version = plistlib.loads((old_app / 'Contents/Info.plist').read_bytes())['CFBundleVersion']
-                expected = result == 'updated-and-relaunched' and version == '2' if scenario == 'valid' else result.startswith('rejected-') and version == '1'
+                display_name = plistlib.loads((old_app / 'Contents/Info.plist').read_bytes())['CFBundleDisplayName']
+                expected = result == 'updated-and-relaunched' and version == '2' and display_name == 'Codex Switcher' and len(list(installed.glob('*.app'))) == 1 if scenario == 'valid' else result.startswith('rejected-') and version == '1'
                 if process.poll() is None:
                     try: process.wait(timeout=5)
                     except subprocess.TimeoutExpired: process.terminate(); process.wait(timeout=5)

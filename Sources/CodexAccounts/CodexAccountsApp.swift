@@ -4,7 +4,7 @@ import AppKit
 @main struct CodexAccountsApp: App {
     @StateObject private var model = AppModel(demo: PreviewConfiguration.enabled)
     var body: some Scene {
-        WindowGroup("Codex Accounts", id: "accounts") {
+        WindowGroup("Codex Switcher", id: "accounts") {
             AccountsView().environmentObject(model)
                 .frame(minWidth: 820, minHeight: 590)
                 .preferredColorScheme(model.preferredColorScheme)

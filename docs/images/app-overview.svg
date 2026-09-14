@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="450" viewBox="0 0 960 450" role="img" aria-labelledby="title desc">
+<title id="title">Codex Switcher</title><desc id="desc">Switch Codex accounts and check remaining usage. Interface illustration with fictional accounts.</desc>
+<defs>
+  <linearGradient id="icon" x2=".8" y2="1"><stop stop-color="#6685ED"/><stop offset="1" stop-color="#234BAE"/></linearGradient>
+  <filter id="shadow" x="-20%" y="-15%" width="140%" height="140%"><feDropShadow dx="0" dy="8" stdDeviation="14" flood-color="#24345C" flood-opacity=".09"/></filter>
+</defs>
+<rect width="960" height="450" rx="22" fill="#F5F7FB"/>
+<g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">
+  <rect x="52" y="78" width="60" height="60" rx="16" fill="url(#icon)"/>
+  <g fill="none" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M67 104v-9q0-5 5-5h25m-8-8 8 8-8 8" stroke="#FFF"/>
+    <path d="M97 112v9q0 5-5 5H67m8 8-8-8 8-8" stroke="#CADBFF"/>
+  </g>
+  <text x="52" y="191" font-size="38" font-weight="650" fill="#20283D">Codex Switcher</text>
+  <text x="52" y="233" font-size="24" fill="#334565">Switch accounts.</text>
+  <text x="52" y="266" font-size="24" fill="#334565">See what's left.</text>
+  <text x="52" y="343" font-size="14" fill="#6B778E">Native macOS · Free &amp; open source</text>
+  <g filter="url(#shadow)">
+    <rect x="492" y="36" width="420" height="378" rx="18" fill="#FFF" stroke="#E3E8F0"/>
+  </g>
+  <text x="516" y="77" font-size="18" font-weight="600" fill="#20283D">Your accounts</text>
+  <text x="886" y="76" text-anchor="end" font-size="12" fill="#788398">DEMO</text>
+  <path d="M516 95H888" stroke="#E9EDF4"/>
+  <rect x="508" y="108" width="388" height="90" rx="12" fill="#F0F4FF"/>
+  <text x="526" y="136" font-size="15" font-weight="600" fill="#20283D">Work</text>
+  <rect x="575" y="121" width="54" height="20" rx="6" fill="#E0E9FF"/>
+  <text x="602" y="135" text-anchor="middle" font-size="11" font-weight="600" fill="#4263AC">ACTIVE</text>
+  <text x="878" y="138" text-anchor="end" font-size="21" font-weight="600" fill="#365AC3">62%</text>
+  <rect x="526" y="153" width="352" height="4" rx="2" fill="#DEE5F2"/>
+  <rect x="526" y="153" width="218" height="4" rx="2" fill="#5572D8"/>
+  <text x="526" y="180" font-size="12" fill="#758198">7-day remaining · Just updated</text>
+  <text x="526" y="232" font-size="15" font-weight="600" fill="#20283D">Personal</text>
+  <text x="878" y="234" text-anchor="end" font-size="21" font-weight="600" fill="#365AC3">89%</text>
+  <rect x="526" y="249" width="352" height="4" rx="2" fill="#E7EBF2"/>
+  <rect x="526" y="249" width="313" height="4" rx="2" fill="#5572D8"/>
+  <text x="526" y="276" font-size="12" fill="#758198">7-day remaining · Just updated</text>
+  <path d="M516 302H888" stroke="#E9EDF4"/>
+  <text x="526" y="334" font-size="14" fill="#445470">Refresh all accounts</text>
+  <path d="M861 323a8 8 0 1 0 6 11m-6-11h7v-6" fill="none" stroke="#758198" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="526" y="385" font-size="11" fill="#8A94A6">Interface illustration · Fictional accounts and usage</text>
+</g></svg>

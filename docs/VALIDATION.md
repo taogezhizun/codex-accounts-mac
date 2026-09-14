@@ -85,3 +85,11 @@ Real multi-account OpenAI quota responses, long-running expiry/re-login behavior
 ### 0.4.1 distribution checks
 
 The release archives and both appcast feeds were signed with the existing publishing identity. Independent Ed25519 verification using the public key shipped in 0.3.2 passed for both archives and both feeds; the key is unchanged. GitHub's SHA-256 digests and byte counts match all four local DMG/ZIP assets. The private key was not exported.
+
+## 0.4.2 branding and upgrade continuity
+
+Renamed the app's display and bundle names to Codex Switcher, including window/menu/about labels, installer title and release titles. Kept the bundle identifier, executable, storage and preferences locations, signing key, appcast URLs, repository URL, archive root and download filenames. The original copyright attribution is retained.
+
+83 local tests passed, including the signed-out real CLI smoke test. The disposable Sparkle integration fixture changes both CFBundleName and CFBundleDisplayName from the former name to the new name while retaining one installed bundle; signed replacement and relaunch succeeded, and changed archives/feeds were rejected. No real user app, account store or credential was used. Both architectures built and passed DMG/ZIP equality, application signature and private-path checks.
+
+An isolated synthetic preview verified the window, menu and About name plus version 0.4.2. The new README illustration was visually inspected in a browser and is explicitly marked as fictional; it does not imply an English app interface. The English README states that the current interface is Chinese. The English X copy fits a standard 280-character post (228 characters with the URL counted as 23); it is provided as a draft and was not posted.

@@ -19,7 +19,7 @@ struct MenuPanel: View {
             } else {
                 HStack(spacing: 10) {
                     BrandMark(size: 32)
-                    VStack(alignment: .leading, spacing: 3) { Text("Codex Accounts").font(.headline); Text("选择账号，快速切换").font(.system(size: 10)).foregroundStyle(.secondary) }
+                    VStack(alignment: .leading, spacing: 3) { Text("Codex Switcher").font(.headline); Text("选择账号，快速切换").font(.system(size: 10)).foregroundStyle(.secondary) }
                     Spacer()
                     Button { model.hideEmails.toggle() } label: { Image(systemName: model.hideEmails ? "eye.slash" : "eye").frame(width: 24, height: 24) }
                         .buttonStyle(.plain).foregroundStyle(.secondary).accessibilityLabel(model.hideEmails ? "显示邮箱" : "隐藏邮箱")
@@ -85,7 +85,7 @@ struct MenuPanel: View {
                         CheckForAppUpdates(updates: model.updates)
                     } label: { Image(systemName: "ellipsis") }.help("更多操作")
                     SettingsLink { Image(systemName: "gearshape") }.help("设置")
-                    Button { NSApp.terminate(nil) } label: { Image(systemName: "power") }.help("退出 Codex Accounts").disabled(model.busy)
+                    Button { NSApp.terminate(nil) } label: { Image(systemName: "power") }.help("退出 Codex Switcher").disabled(model.busy)
                 }.buttonStyle(.borderless).padding(15)
             }
         }.frame(width: 368).onAppear { model.checkCurrentIdentity() }

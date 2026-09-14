@@ -23,7 +23,7 @@ final class KeychainVault {
          kSecAttrAccount as String: key, kSecAttrSynchronizable as String: false]
     }
     private func failure(_ status: OSStatus) -> Error {
-        AccountsError.message("钥匙串访问失败（\(status)）。请解锁登录钥匙串并允许 Codex Accounts 访问。")
+        AccountsError.message("钥匙串访问失败（\(status)）。请解锁登录钥匙串并允许 Codex Switcher 访问。")
     }
 }
 

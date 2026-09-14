@@ -22,6 +22,6 @@ PY
 /usr/bin/swift "$ROOT/scripts/make-dmg-background.swift" "$OUT/installer-background.tiff"
 "$PYTHON" -m dmgbuild -s "$ROOT/scripts/dmg-settings.py" \
   -D "app=$APP" -D "background=$OUT/installer-background.tiff" \
-  'Codex Accounts' "$DMG"
+  'Codex Switcher' "$DMG"
 /usr/bin/hdiutil verify "$DMG"
 printf 'Built installer: %s\n' "$DMG"

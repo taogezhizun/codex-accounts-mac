@@ -45,11 +45,11 @@ def main():
         signed('--verify', archive, signature)
         rss = ET.Element('rss', {'version':'2.0'})
         channel = ET.SubElement(rss, 'channel')
-        ET.SubElement(channel, 'title').text = 'Codex Accounts for macOS'
+        ET.SubElement(channel, 'title').text = 'Codex Switcher for macOS'
         ET.SubElement(channel, 'link').text = REPOSITORY
         ET.SubElement(channel, 'description').text = 'Signed updates maintained by taogezhizun.'
         item = ET.SubElement(channel, 'item')
-        ET.SubElement(item, 'title').text = f'Codex Accounts {args.version}'
+        ET.SubElement(item, 'title').text = f'Codex Switcher {args.version}'
         ET.SubElement(item, 'pubDate').text = email.utils.format_datetime(datetime.datetime.now(datetime.timezone.utc))
         ET.SubElement(item, f'{{{NS}}}version').text = info['CFBundleVersion']
         ET.SubElement(item, f'{{{NS}}}shortVersionString').text = args.version

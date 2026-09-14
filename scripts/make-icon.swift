@@ -60,7 +60,7 @@ let board = bitmap(width: 960, height: 520) {
     func label(_ text: String, at point: NSPoint, size: CGFloat, weight: NSFont.Weight = .regular, foreground: NSColor = .secondaryLabelColor) {
         (text as NSString).draw(at: point, withAttributes: [.font: NSFont.systemFont(ofSize: size, weight: weight), .foregroundColor: foreground])
     }
-    label("Codex Accounts", at: NSPoint(x: 44, y: 448), size: 27, weight: .semibold, foreground: color(0.08, 0.13, 0.23))
+    label("Codex Switcher", at: NSPoint(x: 44, y: 448), size: 27, weight: .semibold, foreground: color(0.08, 0.13, 0.23))
     label("A native switch, in both directions.", at: NSPoint(x: 45, y: 418), size: 14)
     drawIcon(in: NSRect(x: 48, y: 55, width: 330, height: 330))
     color(0.10, 0.13, 0.21).setFill(); NSBezierPath(roundedRect: NSRect(x: 438, y: 180, width: 476, height: 194), xRadius: 22, yRadius: 22).fill()
